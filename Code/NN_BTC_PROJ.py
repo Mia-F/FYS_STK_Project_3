@@ -9,6 +9,9 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, m
 import pandas as pd
 import matplotlib.pyplot as plt
 import joblib
+import seaborn as sns
+
+sns.set_theme()
 
 class Data:
     def __init__(self, file_path):
@@ -104,13 +107,13 @@ class LSTMModel:
         print(f"Model saved as {self.model_name}")
 
 # Create the Data Frame for training data
-data_frame = Data('C:\\Users\\Maxsc\\OneDrive\\VSC\\Cryto_bots\\Data\\BTC-USD_2014.csv')
+data_frame = Data("/Users/miafrivik/Documents/GitHub/FYS_STK_Project_3/Data/BTC-USD_2014.csv")
 data_frame.load_data()
 data_frame.add_technical_indicators()
 ta_data = data_frame.extract_data_for_NN()
 
 model_name = 'lstm_model_proj.keras'
-lstm_model = LSTMModel(ta_data, look_back=11, model_name=model_name)
+lstm_model = LSTMModel(ta_data, look_back=2, model_name=model_name)
 lstm_model.train_model()
 tscv = TimeSeriesSplit(n_splits=5)
 
@@ -151,9 +154,11 @@ print(f'Average R2: {average_r2}')
 print(f'Average MAPE: {average_mape}')
 
 # Setting days for plot
-days = 356
+days = 365 #* 30
 last_100_predictions = final_predictions[-days:]
 last_100_actuals = final_actuals[-days:]
+
+print(f"Average days: {days}")
 
 # Find the points of intersection
 cross_points_x = []
@@ -166,9 +171,9 @@ for i in range(1, len(last_100_actuals)):
 
 # Plotting
 plt.figure(figsize=(9, 5))
-plt.plot(last_100_actuals, label='Actual Prices', color='blue', linestyle='-', linewidth=2)
-plt.plot(last_100_predictions, label='Predicted Prices', color='red', linestyle='-.', linewidth=2)
-plt.scatter(cross_points_x, cross_points_y, color='green', marker='x', s=100, label='Cross Points')
+plt.plot(last_100_actuals, label='Actual Prices', color='tab:blue', linestyle='-', linewidth=2)
+plt.plot(last_100_predictions, label='Predicted Prices', color='tab:red', linestyle='-.', linewidth=2)
+plt.scatter(cross_points_x, cross_points_y, color='tab:green', marker='x', s=100, label='Cross Points')
 # Configure plot details
 plt.title(f'Actual vs Predicted - Last {days} Days - R2: {average_r2}', fontsize=16)
 plt.xlabel(f'Time (Last {days} Days)', fontsize=14)
