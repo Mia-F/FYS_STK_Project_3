@@ -5,6 +5,9 @@ import matplotlib.pyplot as plt
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import train_test_split
 from sklearn import tree
+from sklearn.metrics import accuracy_score
+from os import system
+import graphviz 
 
 fontsize = 30
 sns.set_theme()
@@ -43,19 +46,28 @@ y = data_frame.loc[:, "Label"]
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.8)
 
-clf_gini = DecisionTreeClassifier(criterion='gini', max_depth=3, random_state=0)
+print(X_train.head())
+
+clf_gini = DecisionTreeClassifier(criterion='gini', max_depth=50, random_state=0)
 
 # fit the model
 clf_gini.fit(X_train, y_train)
-y_pred_train_en = clf_en.predict(X_train)
+y_pred_gini = clf_gini.predict(X_test)
 
-plt.figure(figsize=(12,8))
-tree.plot_tree(clf_gini.fit(X_train, y_train)) 
-plt.show()
+print('Model accuracy score with criterion gini index: {0:0.4f}'. format(accuracy_score(y_test, y_pred_gini)))
+
+y_pred_train_gini = clf_gini.predict(X_train)
+print('Training-set accuracy score: {0:0.4f}'. format(accuracy_score(y_train, y_pred_train_gini)))
+
+print('Training set score: {:.4f}'.format(clf_gini.score(X_train, y_train)))
+
+print('Test set score: {:.4f}'.format(clf_gini.score(X_test, y_test)))
 
 
-from sklearn.metrics import confusion_matrix
+print(clf_gini)
+print(X_train.columns)
+print(y_train)
 
-cm = confusion_matrix(y_test, y_pred_en)
-
-print('Confusion matrix\n\n', cm)
+dotfile = open("dtree.dot", 'w')
+dotfile = tree.export_graphviz(clf_gini, out_file = dotfile, feature_names = X.columns)
+system("dot -Tpng dtree.dot -o dtree.png")
