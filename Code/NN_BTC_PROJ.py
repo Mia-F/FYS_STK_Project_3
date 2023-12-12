@@ -106,81 +106,82 @@ class LSTMModel:
         self.model.save(self.model_name)
         print(f"Model saved as {self.model_name}")
 
-# Create the Data Frame for training data
-data_frame = Data("/Users/miafrivik/Documents/GitHub/FYS_STK_Project_3/Data/BTC-USD_2014.csv")
-data_frame.load_data()
-data_frame.add_technical_indicators()
-ta_data = data_frame.extract_data_for_NN()
+if __name__ == "__main__":
+    # Create the Data Frame for training data
+    data_frame = Data("/Users/miafrivik/Documents/GitHub/FYS_STK_Project_3/Data/BTC-USD_2014.csv")
+    data_frame.load_data()
+    data_frame.add_technical_indicators()
+    ta_data = data_frame.extract_data_for_NN()
 
-model_name = 'lstm_model_proj.keras'
-lstm_model = LSTMModel(ta_data, look_back=2, model_name=model_name)
-lstm_model.train_model()
-tscv = TimeSeriesSplit(n_splits=5)
+    model_name = 'lstm_model_proj.keras'
+    lstm_model = LSTMModel(ta_data, look_back=2, model_name=model_name)
+    lstm_model.train_model()
+    tscv = TimeSeriesSplit(n_splits=5)
 
-# Metrics and Prediction Logic Remains Same
-final_predictions = []
-final_actuals = []
-mse_values = []
-mae_values = []
-r2_values = []
-mape_values = []
-
-
-if lstm_model.model is not None:  # Ensure model is available
-    for train_index, test_index in tscv.split(lstm_model.X):
-        X_train, X_test = lstm_model.X[train_index], lstm_model.X[test_index]
-        y_train, y_test = lstm_model.y[train_index], lstm_model.y[test_index]
-
-        predictions = lstm_model.model.predict(X_test)
-        final_predictions.extend(predictions.flatten())
-        final_actuals.extend(y_test)
-
-        # Calculate and store metrics
-        mse_values.append(mean_squared_error(y_test, predictions))
-        mae_values.append(mean_absolute_error(y_test, predictions))
-        r2_values.append(r2_score(y_test, predictions))
-        mape_values.append(mean_absolute_percentage_error(y_test, predictions))
+    # Metrics and Prediction Logic Remains Same
+    final_predictions = []
+    final_actuals = []
+    mse_values = []
+    mae_values = []
+    r2_values = []
+    mape_values = []
 
 
-# Compute average of the metrics
-average_mse = sum(mse_values) / len(mse_values)
-average_mae = sum(mae_values) / len(mae_values)
-average_r2 = round(sum(r2_values) / len(r2_values), 5)
-average_mape = sum(mape_values) / len(mape_values)
+    if lstm_model.model is not None:  # Ensure model is available
+        for train_index, test_index in tscv.split(lstm_model.X):
+            X_train, X_test = lstm_model.X[train_index], lstm_model.X[test_index]
+            y_train, y_test = lstm_model.y[train_index], lstm_model.y[test_index]
 
-print(f'Average MSE: {average_mse}')
-print(f'Average MAE: {average_mae}')
-print(f'Average R2: {average_r2}')
-print(f'Average MAPE: {average_mape}')
+            predictions = lstm_model.model.predict(X_test)
+            final_predictions.extend(predictions.flatten())
+            final_actuals.extend(y_test)
 
-# Setting days for plot
-days = 365 #* 30
-last_100_predictions = final_predictions[-days:]
-last_100_actuals = final_actuals[-days:]
+            # Calculate and store metrics
+            mse_values.append(mean_squared_error(y_test, predictions))
+            mae_values.append(mean_absolute_error(y_test, predictions))
+            r2_values.append(r2_score(y_test, predictions))
+            mape_values.append(mean_absolute_percentage_error(y_test, predictions))
 
-print(f"Average days: {days}")
 
-# Find the points of intersection
-cross_points_x = []
-cross_points_y = []
-for i in range(1, len(last_100_actuals)):
-    if (last_100_actuals[i-1] < last_100_predictions[i-1] and last_100_actuals[i] > last_100_predictions[i]) or \
-       (last_100_actuals[i-1] > last_100_predictions[i-1] and last_100_actuals[i] < last_100_predictions[i]):
-        cross_points_x.append(i)
-        cross_points_y.append(last_100_actuals[i])
+    # Compute average of the metrics
+    average_mse = sum(mse_values) / len(mse_values)
+    average_mae = sum(mae_values) / len(mae_values)
+    average_r2 = round(sum(r2_values) / len(r2_values), 5)
+    average_mape = sum(mape_values) / len(mape_values)
 
-# Plotting
-plt.figure(figsize=(9, 5))
-plt.plot(last_100_actuals, label='Actual Prices', color='tab:blue', linestyle='-', linewidth=2)
-plt.plot(last_100_predictions, label='Predicted Prices', color='tab:red', linestyle='-.', linewidth=2)
-plt.scatter(cross_points_x, cross_points_y, color='tab:green', marker='x', s=100, label='Cross Points')
-# Configure plot details
-plt.title(f'Actual vs Predicted - Last {days} Days - R2: {average_r2}', fontsize=16)
-plt.xlabel(f'Time (Last {days} Days)', fontsize=14)
-plt.ylabel('Price', fontsize=14)
-plt.grid(True, which='both', linestyle='--', linewidth=0.5)
-plt.legend(fontsize=12)
-plt.subplots_adjust(left=0.1, bottom=0.2)
-# Save the plot
-plt.savefig(f'{model_name}.png', bbox_inches='tight')
-plt.show()
+    print(f'Average MSE: {average_mse}')
+    print(f'Average MAE: {average_mae}')
+    print(f'Average R2: {average_r2}')
+    print(f'Average MAPE: {average_mape}')
+
+    # Setting days for plot
+    days = 365 #* 30
+    last_100_predictions = final_predictions[-days:]
+    last_100_actuals = final_actuals[-days:]
+
+    print(f"Average days: {days}")
+
+    # Find the points of intersection
+    cross_points_x = []
+    cross_points_y = []
+    for i in range(1, len(last_100_actuals)):
+        if (last_100_actuals[i-1] < last_100_predictions[i-1] and last_100_actuals[i] > last_100_predictions[i]) or \
+        (last_100_actuals[i-1] > last_100_predictions[i-1] and last_100_actuals[i] < last_100_predictions[i]):
+            cross_points_x.append(i)
+            cross_points_y.append(last_100_actuals[i])
+
+    # Plotting
+    plt.figure(figsize=(9, 5))
+    plt.plot(last_100_actuals, label='Actual Prices', color='tab:blue', linestyle='-', linewidth=2)
+    plt.plot(last_100_predictions, label='Predicted Prices', color='tab:red', linestyle='-.', linewidth=2)
+    plt.scatter(cross_points_x, cross_points_y, color='tab:green', marker='x', s=100, label='Cross Points')
+    # Configure plot details
+    plt.title(f'Actual vs Predicted - Last {days} Days - R2: {average_r2}', fontsize=16)
+    plt.xlabel(f'Time (Last {days} Days)', fontsize=14)
+    plt.ylabel('Price', fontsize=14)
+    plt.grid(True, which='both', linestyle='--', linewidth=0.5)
+    plt.legend(fontsize=12)
+    plt.subplots_adjust(left=0.1, bottom=0.2)
+    # Save the plot
+    plt.savefig(f'{model_name}.png', bbox_inches='tight')
+    plt.show()

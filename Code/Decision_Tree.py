@@ -1,199 +1,177 @@
-import numpy as np
-import seaborn as sns
-import pandas as pd 
 import matplotlib.pyplot as plt
+import numpy as np
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.model_selection import train_test_split
 from sklearn import tree
-from sklearn.metrics import accuracy_score
 from sklearn.metrics import r2_score
 from sklearn.metrics import mean_squared_error
 from sklearn.linear_model import LinearRegression
 from sklearn.tree import DecisionTreeRegressor
 from os import system
-import graphviz 
+import random
+import os
+from pathlib import Path
+import pandas as pd 
 
-
-
-fontsize = 30
-sns.set_theme()
-params = {
-    "font.family": "Serif",
-    "font.serif": "Roman", 
-    "text.usetex": True,
-    "axes.titlesize": fontsize,
-    "axes.labelsize": fontsize,
-    "xtick.labelsize": "xx-large",
-    "ytick.labelsize": "xx-large",
-    "legend.fontsize": fontsize
-}
-plt.rcParams.update(params)
-pd.options.mode.chained_assignment = None  # default='warn'
-
-class Gini_Decision_tree:
-    def __init__(self,  X_train, y_train, X_test, y_test, printing=False, data_frame=None, depth=3, predicted_days = 10,) -> None:
+random.seed(10)
+class Decision_tree:
+    def __init__(self,  X_train, y_train, X_test, y_test, printing=False, depth=3, randomnes = 0, alpha= False, method="squared_error") -> None:
         self.depth = depth
-        self.predicted_days = predicted_days
         self.X_train = X_train
         self.y_train = y_train
         self.X_test = X_test
         self.y_test = y_test
         self.printing = printing
-        self.data_frame = data_frame
+        self.randomnes = randomnes
+        self.alpha = alpha
+        self.method = method
     
     def predict(self):
         """
-        A function using skit-learns decisonTree with gini index to predict prices
+        A function using skit-learns decisonTreeRegressor to fit the model to the dataset 
         """
-        #self.clf_gini = DecisionTreeClassifier(criterion='gini', max_depth=self.depth, random_state=0)
-        self.clf = DecisionTreeRegressor(ccp_alpha=0, max_depth=self.depth, random_state=0)
-        # fit the model
-        self.clf.fit(self.X_train, self.y_train)
-        self.y_pred_gini = self.clf.predict(self.X_test)
-        self.y_pred_train_gini = self.clf.predict(self.X_train)
-        dotfile = open("dtree.dot", 'w')
-        dotfile = tree.export_graphviz(self.clf, out_file = dotfile, feature_names = X.columns)
-        system("dot -Tpng dtree.dot -o dtree.png")
+        clf = DecisionTreeRegressor(criterion=self.method, max_depth=self.depth, random_state=self.randomnes, ccp_alpha=self.alpha)
+        if self.alpha == True:
+            
+            #Define path for saving plots
+            cwd = os.getcwd()
+            
+            path = Path(cwd) / "FigurePlots" / "Decision_tree"/ self.method 
+            if not path.exists():
+                path.mkdir()
 
-        return self.y_pred_gini, self.y_pred_train_gini
+            path_pruning = clf.cost_complexity_pruning_path(self.X_train, self.y_train)
+            ccp_alphas, impurities = path_pruning.ccp_alphas, path_pruning.impurities
+            clfs = []
 
-    def accuracy(self):
-        """
-        A function returning the accuracy scores for the training and testing data
-        """
-        self.accuracy_score_test = accuracy_score(self.y_test, self.y_pred_gini)
-        self.accuracy_score_train = accuracy_score(self.y_train, self.y_pred_train_gini)
-        if self.printing==True:
-            print(f"Model accuracy score with gini index: {self.accuracy_score_test:.4f}")
-            print(f"Training-set accuracy score with gini index: {self.accuracy_score_train:.4f}")
-        return self.accuracy_score_test, self.accuracy_score_train
+            fig, ax = plt.subplots()
+            ax.plot(ccp_alphas[:-1], impurities[:-1], marker="o", drawstyle="steps-post")
+            ax.set_xlabel("effective alpha")
+            ax.set_ylabel("total impurity of leaves")
+            #ax.set_title("Total Impurity vs effective alpha for training set")
+            plt.savefig(path / "Impurity.png")
+            plt.close()
+
+            mse = np.zeros(len(ccp_alphas))
+            mse_train = np.zeros(len(ccp_alphas))
+
+            for i in range(len(ccp_alphas)):
+                clf = DecisionTreeRegressor(criterion=self.method, random_state=0, ccp_alpha=ccp_alphas[i])
+                clf.fit(self.X_train, self.y_train)
+                clfs.append(clf)
+                y_pred = clf.predict(self.X_test)
+                y_pred_train = clf.predict(self.X_train)
+
+                mse[i] = mean_squared_error(self.y_test, y_pred)
+                mse_train[i] = mean_squared_error(self.y_train, y_pred_train)
+
+            clfs = clfs[:-1]
+            ccp_alphas = ccp_alphas[:-1]
+
+            node_counts = [clf.tree_.node_count for clf in clfs]
+            depth = [clf.tree_.max_depth for clf in clfs]
+            fig, ax = plt.subplots(2, 1)
+            ax[0].plot(ccp_alphas, node_counts, marker="o", drawstyle="steps-post")
+            ax[0].set_xlabel("alpha")
+            ax[0].set_ylabel("number of nodes")
+            #ax[0].set_title("Number of nodes vs alpha")
+            ax[1].plot(ccp_alphas, depth, marker="o", drawstyle="steps-post")
+            ax[1].set_xlabel("alpha")
+            ax[1].set_ylabel("depth of tree")
+            #ax[1].set_title("Depth vs alpha")
+            plt.savefig(path / "Alpha_depth.png")
+            plt.close()
+
+            fig, ax = plt.subplots()
+            ax.plot(ccp_alphas, mse[:-1], label="Test")
+            ax.plot(ccp_alphas, mse_train[:-1], label="Train")
+            ax.set_xlabel("alpha")
+            ax.set_ylabel("MSE")
+            #ax.set_title("MSE vs alpha")
+            ax.legend()
+            plt.savefig(path / "Alpha_mse.png")
+            plt.close()
+                    
+        else:   
+            clf.fit(self.X_train, self.y_train)
+            y_pred = clf.predict(self.X_test)
+            y_pred_train = clf.predict(self.X_train)
+            return y_pred, y_pred_train
+        
     
-    def R2_score(self):
+
+    def R2_score(self, y_pred, y_pred_train):
         """
         A function returning the R2 score for both the testing and training data
         """
-        self.r2_score_test = r2_score(self.y_test, self.y_pred_gini)
-        self.r2_score_train = r2_score(self.y_train, self.y_pred_train_gini)
+        r2_score_test = r2_score(self.y_test, y_pred)
+        r2_score_train = r2_score(self.y_train, y_pred_train)
         if self.printing==True:
-            print(f"Model R2 score with gini index: {self.r2_score_test:.4f}")
-            print(f"Training-set R2 score with gini index: {self.r2_score_train:.4f}")
-        return self.r2_score_test, self.r2_score_train
+            print(f"Model R2 score: {r2_score_test:.4f}")
+            print(f"Training-set R2 score: {r2_score_train:.4f}")
+        return r2_score_test, r2_score_train
     
-    def mse(self):
+    def mse(self, y_pred, y_pred_train):
         """
         A function returning the MSE for both the testing and training data
         """
-        self.mse_test = mean_squared_error(self.y_test, self.y_pred_gini)
-        self.mse_train = mean_squared_error(self.y_train, self.y_pred_train_gini)
+        mse_test = mean_squared_error(self.y_test, y_pred)
+        mse_train = mean_squared_error(self.y_train, y_pred_train)
         if self.printing==True:
-            print(f"Model MSE value with gini index: {self.mse_test:.4f}")
-            print(f"Training-set MSE value with gini index: {self.mse_train:.4f}")
-        return self.mse_test, self.mse_train
+            print(f"Model MSE value: {mse_test:.4f}")
+            print(f"Training-set MSE value: {mse_train:.4f}")
+        return mse_test, mse_train
     
-    def predict_future(self):
-  
+class predict_future_tree:
+    def __init__(self, X,y , printing=False, data_frame=None, depth=3, predicted_days = 10, randomnes = 0, method="squared_error") -> None:
+        self.depth = depth
+        self.predicted_days = predicted_days
+        self.X = X
+        self.y = y
+        self.printing = printing
+        self.data_frame = data_frame
+        self.randomnes = randomnes
+        self.method = method
+
+    def predict(self):
+
         df = pd.DataFrame()
-        df = self.data_frame
-        df = df.drop(["Date", "Label"], axis=1)
+        df = self.data_frame 
+        df = df.drop(["Label"], axis=1)
         df["Prediction"] = df["Close"].shift(-self.predicted_days)
 
         X = df.drop(["Prediction"], axis=1)[:-self.predicted_days]
+        print(X)
         y = df["Prediction"][:-self.predicted_days]
 
-       # x_train, x_test, y_train, y_test = train_test_split(X, y, test_size = 0.2)
-        self.clf.fit(X, y)
-        print(X)
+       
+        clf = DecisionTreeRegressor(criterion=self.method, random_state=self.randomnes)
+        clf.fit(X, y)
         x_future = df.drop(["Prediction"], axis = 1)[-self.predicted_days:]
         print(x_future)
         x_future = x_future.tail(self.predicted_days)
         
-        tree_prediction = self.clf.predict(x_future)
+        tree_prediction = clf.predict(x_future)
         predictions = tree_prediction 
         #print(predictions)
         
-        valid = df[X.shape[0]:]
+        valid = x_future
         valid["Prediction"] = predictions
+        print(valid.tail())
         #print(valid.tail())
         #df["Prediction"] = predictions
-
+        cwd = os.getcwd()
+        path = Path(cwd) / "FigurePlots" / "Decision_tree"
+        if not path.exists():
+            path.mkdir()
         plt.figure(figsize=(16,8))
         plt.title("Model")
         plt.xlabel('Days')
         plt.plot(X.loc[:,"Close"])
         plt.plot(valid.loc[:,"Prediction"])
-        plt.plot(self.data_frame.loc[:,"Close"])
+        #plt.plot(self.data_frame.loc[:,"Close"])
         plt.legend(["Original", "Predicted"])
-        plt.show()
-
-  
-
-data_frame =pd.read_csv("/Users/miafrivik/Documents/GitHub/FYS_STK_Project_3/Data/BTC-USD_2014.csv")
-
-df = pd.DataFrame(data_frame)
-#print(df)
-
-#X = df[df.columns[1:-2]]
-X = df.drop(["Date", "Label"], axis=1)
-y = data_frame.loc[:, "Target"]
+        plt.savefig(path / "predicition.png")
+        plt.close()
 
 
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.8)
-
-Model_gini = Gini_Decision_tree(X_train, y_train, X_test, y_test, printing=True, data_frame=df, depth=100, predicted_days=100)
-y_pred_gini, y_pred_train_gini = Model_gini.predict()
-#accuracy_score_test, accuracy_score_train = Model_gini.accuracy()
-r2_score_test, r2_score_train = Model_gini.R2_score()
-mse_test, mse_train = Model_gini.mse()
-Model_gini.predict_future()
-
-
-"""
-print(X_train.head())
-
-clf_gini = DecisionTreeClassifier(criterion='gini', max_depth=50, random_state=0)
-
-# fit the model
-clf_gini.fit(X_train, y_train)
-y_pred_gini = clf_gini.predict(X_test)
-
-print('Model accuracy score with criterion gini index: {0:0.4f}'. format(accuracy_score(y_test, y_pred_gini)))
-
-y_pred_train_gini = clf_gini.predict(X_train)
-print('Training-set accuracy score: {0:0.4f}'. format(accuracy_score(y_train, y_pred_train_gini)))
-
-print('Training set score: {:.4f}'.format(clf_gini.score(X_train, y_train)))
-
-print('Test set score: {:.4f}'.format(clf_gini.score(X_test, y_test)))
-
-
-dotfile = open("dtree.dot", 'w')
-dotfile = tree.export_graphviz(clf_gini, out_file = dotfile, feature_names = X.columns)
-system("dot -Tpng dtree.dot -o dtree.png")
-
-
-clf_en = DecisionTreeClassifier(criterion='entropy', max_depth=50, random_state=0)
-
-clf_en.fit(X_train, y_train)
-
-y_pred_en = clf_en.predict(X_test)
-
-print('Model accuracy score with criterion entropy: {0:0.4f}'. format(accuracy_score(y_test, y_pred_en)))
-
-y_pred_train_en = clf_en.predict(X_train)
-
-print('Training-set accuracy score: {0:0.4f}'. format(accuracy_score(y_train, y_pred_train_en)))
-
-print('Training set score: {:.4f}'.format(clf_en.score(X_train, y_train)))
-
-print('Test set score: {:.4f}'.format(clf_en.score(X_test, y_test)))
-
-dotfile = open("dtree_entropy.dot", 'w')
-dotfile = tree.export_graphviz(clf_en, out_file = dotfile, feature_names = X.columns)
-system("dot -Tpng dtree_entropy.dot -o dtree_entropy.png")
-"""
-
-#plt.plot(data_frame.loc[:,"btc_market_price"])
-#plt.xlabel("Days since 15 of November 2014")
-#plt.ylabel("USD")
-#plt.show()
