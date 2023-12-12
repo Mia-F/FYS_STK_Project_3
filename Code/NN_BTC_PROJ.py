@@ -5,7 +5,7 @@ from keras.models import Sequential
 from keras.layers import LSTM, Dense, Dropout
 from keras.callbacks import EarlyStopping
 from sklearn.model_selection import TimeSeriesSplit
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, mean_absolute_percentage_error
+from sklearn.metrics import mean_squared_error, max_error, mean_absolute_error, r2_score, mean_absolute_percentage_error
 import pandas as pd
 import matplotlib.pyplot as plt
 import joblib
@@ -125,6 +125,7 @@ if __name__ == "__main__":
     mae_values = []
     r2_values = []
     mape_values = []
+    max_error_values = []
 
 
     if lstm_model.model is not None:  # Ensure model is available
@@ -140,6 +141,7 @@ if __name__ == "__main__":
             mse_values.append(mean_squared_error(y_test, predictions))
             mae_values.append(mean_absolute_error(y_test, predictions))
             r2_values.append(r2_score(y_test, predictions))
+            max_error_values.append(max_error(y_test, predictions))
             mape_values.append(mean_absolute_percentage_error(y_test, predictions))
 
 
@@ -148,11 +150,13 @@ if __name__ == "__main__":
     average_mae = sum(mae_values) / len(mae_values)
     average_r2 = round(sum(r2_values) / len(r2_values), 5)
     average_mape = sum(mape_values) / len(mape_values)
+    average_max_error = sum(max_error_values) / len(max_error_values)
 
     print(f'Average MSE: {average_mse}')
     print(f'Average MAE: {average_mae}')
     print(f'Average R2: {average_r2}')
     print(f'Average MAPE: {average_mape}')
+    print(f'Average MAPE: {average_max_error}')
 
     # Setting days for plot
     days = 365 #* 30
@@ -181,6 +185,14 @@ if __name__ == "__main__":
     plt.ylabel('Price', fontsize=14)
     plt.grid(True, which='both', linestyle='--', linewidth=0.5)
     plt.legend(fontsize=12)
+    metrics_text = (
+    f"Metrics:\n"
+    f"R2: {average_r2:.2f}\n"
+    f"MAE: {average_mae:.2f}\n"
+    f"Max Error: {average_max_error:.2f}\n"
+    f"MAPE: {average_mape:.2%}\n"  # Formatting MAPE as a percentage
+    )
+    plt.text(0.02, 0.02, metrics_text, fontsize=10, transform=plt.gcf().transFigure)
     plt.subplots_adjust(left=0.1, bottom=0.2)
     # Save the plot
     plt.savefig(f'{model_name}.png', bbox_inches='tight')
