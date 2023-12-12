@@ -107,7 +107,13 @@ class LSTMModel:
         print(f"Model saved as {self.model_name}")
 
 # Create the Data Frame for training data
-data_frame = Data("/Users/miafrivik/Documents/GitHub/FYS_STK_Project_3/Data/BTC-USD_2014.csv")
+user = 'Max'
+
+if user == 'Max':
+    data_frame = Data("C:/Users/Maxsc/OneDrive - Vrije Universiteit Amsterdam/AI Year 3 exchange + BP/Githup Resp/FYS_STK_Project_3/Data/BTC-USD_2014.csv")
+elif user == 'Mia':
+    data_frame = Data("/Users/miafrivik/Documents/GitHub/FYS_STK_Project_3/Data/BTC-USD_2014.csv")
+
 data_frame.load_data()
 data_frame.add_technical_indicators()
 ta_data = data_frame.extract_data_for_NN()
