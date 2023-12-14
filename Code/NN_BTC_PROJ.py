@@ -10,6 +10,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import joblib
 import seaborn as sns
+import os
+from pathlib import Path
 
 sns.set_theme()
 
@@ -133,8 +135,6 @@ if __name__ == "__main__":
 
     if lstm_model.model is not None:  # Ensure model is available
         for train_index, test_index in tscv.split(lstm_model.X):
-            print(type(train_index))
-            print("FADDDDD", train_index)
             X_train, X_test = lstm_model.X[train_index], lstm_model.X[test_index]
             y_train, y_test = lstm_model.y[train_index], lstm_model.y[test_index]
 
@@ -152,7 +152,6 @@ if __name__ == "__main__":
             if len(days) == 0:
                 days.extend(train_index)
                 daily_mse_values_test.extend([np.nan for i in range(len(train_index))])
-
             days.extend(test_index)
 
             for i in range(len(y_test)):
@@ -160,8 +159,12 @@ if __name__ == "__main__":
                 daily_mse_values_test.append(day_mse)
 
 
-    print(days)
     plt.plot(days, daily_mse_values_test)
+    cwd = os.getcwd()
+    path = Path(cwd) / "Code" / "FigurePlots" / "LSTM"/ "MSE"
+    if not path.exists():
+        path.mkdir()
+    plt.savefig(path / "daily_MSE_LSTM.png")
     plt.show()
 
     # Compute average of the metrics
