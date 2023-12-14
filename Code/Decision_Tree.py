@@ -8,7 +8,6 @@ https://www.kaggle.com/code/prashant111/decision-tree-classifier-tutorial
 
 import matplotlib.pyplot as plt
 import numpy as np
-from sklearn.tree import DecisionTreeClassifier
 from sklearn import tree
 from sklearn.metrics import r2_score
 from sklearn.metrics import mean_squared_error
@@ -22,7 +21,7 @@ import pandas as pd
 
 
 class Decision_tree:
-    def __init__(self,  X_train, y_train, X_test, y_test, printing=False, depth=3, randomnes = 0, alpha= False, method="squared_error") -> None:
+    def __init__(self,  X_train, y_train, X_test, y_test, printing=False, depth=3, randomnes = 0, alpha= False, method="squared_error", splitter = "best") -> None:
         """
         Description:
         ------------
@@ -57,6 +56,7 @@ class Decision_tree:
         self.randomnes = randomnes
         self.alpha = alpha
         self.method = method
+        self.splitter = splitter
     
     def predict(self):
         """
@@ -71,7 +71,7 @@ class Decision_tree:
         ------------
         """
     
-        clf = DecisionTreeRegressor(criterion=self.method, max_depth=self.depth, random_state=self.randomnes)
+        clf = DecisionTreeRegressor(criterion=self.method, max_depth=self.depth, random_state=self.randomnes, splitter = self.splitter)
         if self.alpha == True:
             """
             The code for pruning is taken from https://scikit-learn.org/stable/auto_examples/tree/plot_cost_complexity_pruning.html
@@ -99,7 +99,7 @@ class Decision_tree:
             mse_train = np.zeros(len(ccp_alphas))
 
             for i in range(len(ccp_alphas)):
-                clf = DecisionTreeRegressor(criterion=self.method, random_state=0, ccp_alpha=ccp_alphas[i])
+                clf = DecisionTreeRegressor(criterion=self.method, random_state=self.randomnes, ccp_alpha=ccp_alphas[i], splitter=self.splitter)
                 clf.fit(self.X_train, self.y_train)
                 clfs.append(clf)
                 y_pred = clf.predict(self.X_test)
@@ -189,7 +189,7 @@ class Decision_tree:
 
 
 class predict_future_tree:
-    def __init__(self , data_frame=None, depth=3, predicted_days = 10, randomnes = 0, method="squared_error") -> None:
+    def __init__(self , data_frame=None, depth=3, predicted_days = 10, randomnes = 0, method="squared_error", splitter = "best") -> None:
         """
         Description:
         ------------
@@ -201,6 +201,7 @@ class predict_future_tree:
             III predicted_days (int): The amount of days the price is predicted 
             IV  randomnes (int): The random state used in DecisionTreeRegressor
             V   method (str): a string of either squared_error, friedman_mse, absolute error or poisson that is used as criterion for DecisionTreeRegressor  
+            VI  splitter (str): string of either "best" or "random" which is the strategy used to choose the split at each node 
         functions:
             I    predict:  A function that uses decision tree to predict the closing price of Bitcoins
         ------------       
@@ -210,6 +211,7 @@ class predict_future_tree:
         self.data_frame = data_frame
         self.randomnes = randomnes
         self.method = method
+        self.splitter = splitter
 
     def predict(self):
         """
@@ -230,7 +232,7 @@ class predict_future_tree:
         y = df["Prediction"][:-self.predicted_days]
 
         #uses the datset to creat a model 
-        clf = DecisionTreeRegressor(criterion=self.method, random_state=self.randomnes)
+        clf = DecisionTreeRegressor(criterion=self.method, random_state=self.randomnes, splitter=self.splitter)
         #Fit model with data tath does not include the predicted days
         clf.fit(X, y)
 
@@ -257,6 +259,7 @@ class predict_future_tree:
 
         plt.figure(figsize=(12,8))
         plt.xlabel("Days")
+        plt.ylabel("US Dollers")
         plt.plot(self.data_frame.loc[:,"Close"], "--", label="Actual closing price")
         plt.scatter(days, valid.loc[:,"Prediction"], label="Predicted closing price", color="tab:orange")
         plt.legend()
