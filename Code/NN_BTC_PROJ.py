@@ -131,6 +131,7 @@ if __name__ == "__main__":
     max_error_values = []
 
     daily_mse_values_test = []
+    daily_MAE_values_test = []
     days = []
 
     if lstm_model.model is not None:  # Ensure model is available
@@ -152,20 +153,29 @@ if __name__ == "__main__":
             if len(days) == 0:
                 days.extend(train_index)
                 daily_mse_values_test.extend([np.nan for i in range(len(train_index))])
+                daily_MAE_values_test.extend([np.nan for i in range(len(train_index))])
             days.extend(test_index)
 
             for i in range(len(y_test)):
                 day_mse = mean_squared_error([y_test[i]], [predictions[i]])
                 daily_mse_values_test.append(day_mse)
 
+                day_MAE = mean_absolute_error([y_test[i]], [predictions[i]])
+                daily_MAE_values_test.append(day_MAE)
+
 
     plt.plot(days, daily_mse_values_test)
     cwd = os.getcwd()
     path = Path(cwd) / "Code" / "FigurePlots" / "LSTM"/ "MSE"
-    if not path.exists():
-        path.mkdir()
     plt.savefig(path / "daily_MSE_LSTM.png")
     plt.show()
+
+    path = Path(cwd) / "Code" / "FigurePlots" / "LSTM"/ "MAE"
+    plt.plot(days, daily_MAE_values_test)
+    plt.savefig(path / "daily_MAE_LSTM.png")
+    plt.show()
+
+    
 
     # Compute average of the metrics
     average_mse = sum(mse_values) / len(mse_values)
