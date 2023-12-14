@@ -20,13 +20,16 @@ import os
 from pathlib import Path
 import pandas as pd 
 
-random.seed(10)
+
 class Decision_tree:
     def __init__(self,  X_train, y_train, X_test, y_test, printing=False, depth=3, randomnes = 0, alpha= False, method="squared_error") -> None:
         """
         Description:
         ------------
         A class that uses decision tree to create a model of closing prices of Bitcoins
+        The code in this function is based on the "Decision-Tree Classifier Tutorial" from https://www.kaggle.com/code/prashant111/decision-tree-classifier-tutorial
+        and the part with pruning (alpha) is taken from sckit learns example "Post pruning decision trees with cost complexity pruning" from https://scikit-learn.org/stable/auto_examples/tree/plot_cost_complexity_pruning.html
+
         Parameters:
         ------------
             I    X_train (pd.data_frame): A pandas dataframe containing the different parameters the model is trained on.
@@ -36,7 +39,7 @@ class Decision_tree:
             V    printing (Boolean): If True the class will print results while running, default False
             VI   depth (int): The max depth of the decision tree
             VII  randomnes (int): The random state used in DecisionTreeRegressor
-            VIII alpha (Boolean): If True the prediction function will plot dependencies on alpha (pruning) and not return y_pred and y_pred_test, default Flase
+            VIII alpha (Boolean): If True the prediction function will plot dependencies on alpha (pruning) and not return y_pred, y_pred_test and clf, default Flase
             IX   method (str): a string of either squared_error, friedman_mse, absolute error or poisson that is used as criterion for DecisionTreeRegressor  
         functions:
             I    predict:  If alpha is False, the function returns y_pred and y_pred_test which is the predictions for this model.
@@ -64,6 +67,7 @@ class Decision_tree:
         ------------
             I  y_pred (np.ndarray): An array containing the model of the Bitcoin closing prices of the test data  
             II y_pred_train (np.ndarray): An array containing the model of the Bitcoin closing prices of the train data     
+            III clf: 
         ------------
         """
     
@@ -130,13 +134,13 @@ class Decision_tree:
                     
         else:   
             #Fit model with training data
-            clf.fit(self.X_train, self.y_train)
+            parm = clf.fit(self.X_train, self.y_train)
 
             #Predict a model with test data
             y_pred = clf.predict(self.X_test)
             #Predict a model with training data
             y_pred_train = clf.predict(self.X_train)
-            return y_pred, y_pred_train
+            return y_pred, y_pred_train, parm
         
     def R2_score(self, y_pred, y_pred_train):
         """
@@ -248,8 +252,8 @@ class predict_future_tree:
             path.mkdir()
 
         #Plott result against actuall predicted prices
-        lenght = len(df.loc[:,"Close"])
-        days = np.linspace(lenght + 1, lenght + 101, 100)
+        lenght = len(X.loc[:,"Close"])
+        days = np.linspace(lenght + 1 + 108, lenght + self.predicted_days + 1 + 108, self.predicted_days)
 
         plt.figure(figsize=(12,8))
         plt.xlabel("Days")

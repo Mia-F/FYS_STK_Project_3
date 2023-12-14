@@ -10,9 +10,13 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler
 import os
 from pathlib import Path
 import talib as ta
+from os import system
 from NN_BTC_PROJ import Data
+from sklearn import tree
+import random 
 
-fontsize = 29
+random.seed(2023)
+
 sns.set_theme()
 params = {
     "font.family": "Serif",
@@ -28,7 +32,7 @@ params = {
 plt.rcParams.update(params)
 pd.options.mode.chained_assignment = None  # default='warn'
 
-def testing_decision_tress(method, n_min, n_max, path):
+def testing_decision_tress(method, n_min, n_max, path, print):
     """
     Description:
     ------------
@@ -41,6 +45,7 @@ def testing_decision_tress(method, n_min, n_max, path):
         II  n_min (int): min depth of tree 
         III n_max (int): max depth of tree
         VI  Path: path for saving figure
+        V   print (Boolean): If True figure of the best decision tree will be plotted, takes about 20 minutes, default False
 
     Returns:
     ------------
@@ -68,7 +73,7 @@ def testing_decision_tress(method, n_min, n_max, path):
 
             #Call the Decision tree class from Decision_Tree.py 
             Model = Decision_tree(X_train_scaled, y_train_scaled, X_test_scaled, y_test_scaled, printing=False, depth=depth[i], randomnes=randomnes[j], method=method)
-            y_pred, y_pred_train = Model.predict()
+            y_pred, y_pred_train, parm = Model.predict()
 
             #Uptain the MSE and R2 score for both testing and training data
             mse_test, mse_train = Model.mse(y_pred, y_pred_train)
@@ -83,6 +88,15 @@ def testing_decision_tress(method, n_min, n_max, path):
             if mse[i][j] < lowest_mse:
                 lowest_mse = mse[i][j]
                 lowest_mse_index = [depth[i],randomnes[j]]
+                if print == True:
+                    #creat a visulasation of the best tree
+                    plt.figure(figsize=(12,8))
+                    tree.plot_tree(parm) 
+                    plt.savefig(path / "best_tree.png")
+                    plt.close()
+
+    
+
     
     #Plot result and save figurs for MSE and R2 score
     fig, ax = plt.subplots(figsize=(12,6))
@@ -103,9 +117,11 @@ def testing_decision_tress(method, n_min, n_max, path):
     plt.close()
 
     fig, ax = plt.subplots(figsize=(12,6))
-    ax.plot(depth, mse[:,lowest_mse_index[1]])
+    ax.plot(depth, mse[:,lowest_mse_index[1]], label="Test")
+    ax.plot(depth, mse_train_2D[:,lowest_mse_index[1]], label="Train")
     ax.set_xlabel("Depth")
     ax.set_ylabel("MSE")
+    ax.legend()
     plt.savefig(path / "mse_depth.png")
     plt.close()
 
@@ -136,7 +152,7 @@ X = ta_data.drop(["Close", "Target"], axis=1)
 y = ta_data.loc[:, "Close"]
 
 #Define min and max depth for tree
-n_max = 10
+n_max = 20
 n_min = 1
 
 #split in to train test 
@@ -204,6 +220,7 @@ fig, ax = plt.subplots(figsize=(12,6))
 ax.plot(depth, mse[0,:], label="Square error")
 ax.plot(depth, mse[1,:], label="Friedman mse")
 ax.plot(depth, mse[2,:], label="Absolute error")
+ax.set(ylim=(3, 15))
 ax.legend()
 ax.set_xlabel("Depth")
 ax.set_ylabel("MSE")
