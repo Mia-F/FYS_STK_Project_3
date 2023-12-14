@@ -45,7 +45,7 @@ def testing_decision_tress(method, n_min, n_max, path,splitter, print_graph = Fa
         II  n_min (int): min depth of tree 
         III n_max (int): max depth of tree
         VI  Path: path for saving figure
-        V   print_graph (Boolean): If True figure of the best decision tree will be plotted, takes about 20 minutes, default False
+        V   print_graph (Boolean): If True figure of the best decision tree will be plotted, takes about 60 minuts, default False
 
     Returns:
     ------------
@@ -145,7 +145,7 @@ def testing_decision_tress(method, n_min, n_max, path,splitter, print_graph = Fa
     return lowest_mse_index , mse
 
 #Import Bitcoin data and add technical indicators from NN_BTC_PROJ.py
-data_frame = Data("./Data/BTC-USD_2014.csv")
+data_frame = Data("/Users/miafrivik/Documents/GitHub/FYS_STK_Project_3/Data/BTC-USD_2014.csv")
 data_frame.load_data()
 data_frame.add_technical_indicators()
 ta_data = data_frame.extract_data_for_NN()
@@ -193,7 +193,7 @@ for method in methods:
             path.mkdir()
     
         #Get the mse for the diffrent method and at witch depth and random state the lowest mse value is uptainded for each method
-        lowest_mse_method, mse_method = testing_decision_tress(method,n_min, n_max, path,splitter=split, print_graph=True)
+        lowest_mse_method, mse_method = testing_decision_tress(method,n_min, n_max, path,splitter=split, print_graph=False)
         #Se how it is affected by pruning the tree
         Model = Decision_tree(X_train_scaled, y_train_scaled, X_test_scaled, y_test_scaled, printing=True, depth=lowest_mse_method[0], randomnes=lowest_mse_method[1], alpha=True, method = method, splitter=split )
         Model.predict()
@@ -247,6 +247,6 @@ method = methods[index[0]][0]
 random_state = lowest_mse[index[0],1][0]
 
 #Use the best model found to predict Bitcoin prices
-prediciton_model = predict_future_tree(data_frame=ta_data, depth=lowest_mse[index[0],0], predicted_days = 100, randomnes = random_state , method = method)
+prediciton_model = predict_future_tree(data_frame=ta_data, depth=lowest_mse[index[0],0], predicted_days = 1, randomnes = random_state , method = method)
 prediciton_model.predict()
 
