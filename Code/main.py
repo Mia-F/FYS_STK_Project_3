@@ -32,7 +32,7 @@ params = {
 plt.rcParams.update(params)
 pd.options.mode.chained_assignment = None  # default='warn'
 
-def testing_decision_tress(method, n_min, n_max, path, print):
+def testing_decision_tress(method, n_min, n_max, path,splitter, print_graph = False):
     """
     Description:
     ------------
@@ -45,7 +45,7 @@ def testing_decision_tress(method, n_min, n_max, path, print):
         II  n_min (int): min depth of tree 
         III n_max (int): max depth of tree
         VI  Path: path for saving figure
-        V   print (Boolean): If True figure of the best decision tree will be plotted, takes about 20 minutes, default False
+        V   print_graph (Boolean): If True figure of the best decision tree will be plotted, takes about 20 minutes, default False
 
     Returns:
     ------------
@@ -67,12 +67,13 @@ def testing_decision_tress(method, n_min, n_max, path, print):
     lowest_mse = 10e10
     lowest_mse_index = [0,0]
 
+    
     #run throug different depth and random states
     for i in tqdm(range(len(depth))):
         for j in range(len(randomnes)):
 
             #Call the Decision tree class from Decision_Tree.py 
-            Model = Decision_tree(X_train_scaled, y_train_scaled, X_test_scaled, y_test_scaled, printing=False, depth=depth[i], randomnes=randomnes[j], method=method)
+            Model = Decision_tree(X_train_scaled, y_train_scaled, X_test_scaled, y_test_scaled, printing=False, depth=depth[i], randomnes=randomnes[j], method=method, splitter = splitter)
             y_pred, y_pred_train, parm = Model.predict()
 
             #Uptain the MSE and R2 score for both testing and training data
@@ -88,12 +89,14 @@ def testing_decision_tress(method, n_min, n_max, path, print):
             if mse[i][j] < lowest_mse:
                 lowest_mse = mse[i][j]
                 lowest_mse_index = [depth[i],randomnes[j]]
-                if print == True:
+
+                if print_graph == True:
                     #creat a visulasation of the best tree
                     plt.figure(figsize=(12,8))
                     tree.plot_tree(parm) 
                     plt.savefig(path / "best_tree.png")
                     plt.close()
+
 
     
 
@@ -171,6 +174,7 @@ y_test_scaled = (y_test - np.mean(y_train))/np.std(y_train)
 
 #Creating an array with the criterions for DecisionTreeRegressor
 methods = np.array(["squared_error", "friedman_mse","absolute_error"])
+splitter = np.array(["best", "random"])
 
 lowest_mse= []
 mse = []
@@ -179,35 +183,44 @@ i=0
 
 #Runs through the 3 diffrent criterions and 10 diffrent random states
 for method in methods:
-    print(f"method = {method}")
+    for split in splitter:
+        print(f"method = {method}, splitter = {split}")
 
-    #Creat path for figurs
-    cwd = os.getcwd()
-    path = Path(cwd) / "FigurePlots" / "Decision_tree"/ method
-    if not path.exists():
-        path.mkdir()
+        #Creat path for figurs
+        cwd = os.getcwd()
+        path = Path(cwd) / "FigurePlots" / "Decision_tree"/ method / split
+        if not path.exists():
+            path.mkdir()
     
-    #Get the mse for the diffrent method and at witch depth and random state the lowest mse value is uptainded for each method
-    lowest_mse_method, mse_method = testing_decision_tress(method,n_min, n_max, path)
-    #Se how it is affected by pruning the tree
-    Model = Decision_tree(X_train_scaled, y_train_scaled, X_test_scaled, y_test_scaled, printing=True, depth=lowest_mse_method[0], randomnes=lowest_mse_method[1], alpha=True, method = method )
-    Model.predict()
+        #Get the mse for the diffrent method and at witch depth and random state the lowest mse value is uptainded for each method
+        lowest_mse_method, mse_method = testing_decision_tress(method,n_min, n_max, path,splitter=split, print_graph=True)
+        #Se how it is affected by pruning the tree
+        Model = Decision_tree(X_train_scaled, y_train_scaled, X_test_scaled, y_test_scaled, printing=True, depth=lowest_mse_method[0], randomnes=lowest_mse_method[1], alpha=True, method = method, splitter=split )
+        Model.predict()
 
-    lowest_mse.append(lowest_mse_method)
-    index = lowest_mse_method[1]
-    index = int(index)
-    mse.append(mse_method[:,index-1])
-    i += 1
+        lowest_mse.append(lowest_mse_method)
+        print(lowest_mse_method)
+        print(lowest_mse_method[1])
+        index = lowest_mse_method[1]
+        index = int(index)
+        mse.append(mse_method[:,index-1])
+        i += 1
 
 #change list to array
+print(lowest_mse)
 mse = np.array(mse)
 lowest_mse = np.array(lowest_mse)
 
 print("\n")
 print("----------------------------------- Results -----------------------------------")
-print(f"{methods[0]} had a lowest mse of {np.min(mse[0,:]):.5f}, when depth = {lowest_mse[0][0]} and random stat = {lowest_mse[0,1]}")
-print(f"{methods[1]} had a lowest mse of {np.min(mse[1,:]):.5f}, when depth = {lowest_mse[1][0]} and random stat = {lowest_mse[1,1]}")
-print(f"{methods[2]} had a lowest mse of {np.min(mse[2,:]):.5f}, when depth = {lowest_mse[2][0]} and random stat = {lowest_mse[2,1]}")
+print("splitter = best:")
+print(f"{methods[0]} had a lowest mse of {np.min(mse[0,:]):.5f}, when depth = {lowest_mse[0][0]} and random stat = {lowest_mse[1,1]}")
+print(f"{methods[1]} had a lowest mse of {np.min(mse[2,:]):.5f}, when depth = {lowest_mse[2][0]} and random stat = {lowest_mse[3,1]}")
+print(f"{methods[2]} had a lowest mse of {np.min(mse[4,:]):.5f}, when depth = {lowest_mse[4][0]} and random stat = {lowest_mse[5,1]}")
+print("splitter = random:")
+print(f"{methods[0]} had a lowest mse of {np.min(mse[1,:]):.5f}, when depth = {lowest_mse[1][0]} and random stat = {lowest_mse[1,1]}")
+print(f"{methods[1]} had a lowest mse of {np.min(mse[3,:]):.5f}, when depth = {lowest_mse[3][0]} and random stat = {lowest_mse[3,1]}")
+print(f"{methods[2]} had a lowest mse of {np.min(mse[5,:]):.5f}, when depth = {lowest_mse[5][0]} and random stat = {lowest_mse[5,1]}")
 print("-------------------------------------------------------------------------------")
 
 path = Path(cwd) / "FigurePlots" / "Decision_tree"
@@ -229,6 +242,7 @@ plt.close()
 
 #Find which method that had the lowest mse and uptain an index to use for prediction
 index = np.where(mse == np.min(mse))
+methods = np.array(["squared_error", "squared_error", "friedman_mse", "friedman_mse", "absolute_error", "absolute_error"])
 method = methods[index[0]][0]
 random_state = lowest_mse[index[0],1][0]
 
