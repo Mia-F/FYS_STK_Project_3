@@ -10,6 +10,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import joblib
 import seaborn as sns
+import os
+from pathlib import Path
 
 sns.set_theme()
 
@@ -108,8 +110,8 @@ class LSTMModel:
 
 if __name__ == "__main__":
     # Create the Data Frame for training data
-    data_frame = Data("/Users/miafrivik/Documents/GitHub/FYS_STK_Project_3/Data/BTC-USD_2014.csv")
-    data_frame = Data('c:/Users/Maxsc/OneDrive - Vrije Universiteit Amsterdam/AI Year 3 exchange + BP/Githup Resp/FYS_STK_Project_3/Data/BTC-USD_2014.csv')
+    data_frame = Data("./Data/BTC-USD_2014.csv")
+    data_frame = Data('./Data/BTC-USD_2014.csv')
     data_frame.load_data()
     data_frame.add_technical_indicators()
     ta_data = data_frame.extract_data_for_NN()
@@ -128,6 +130,8 @@ if __name__ == "__main__":
     mape_values = []
     max_error_values = []
 
+    daily_mse_values_test = []
+    days = []
 
     if lstm_model.model is not None:  # Ensure model is available
         for train_index, test_index in tscv.split(lstm_model.X):
@@ -145,6 +149,23 @@ if __name__ == "__main__":
             max_error_values.append(max_error(y_test, predictions))
             mape_values.append(mean_absolute_percentage_error(y_test, predictions))
 
+            if len(days) == 0:
+                days.extend(train_index)
+                daily_mse_values_test.extend([np.nan for i in range(len(train_index))])
+            days.extend(test_index)
+
+            for i in range(len(y_test)):
+                day_mse = mean_squared_error([y_test[i]], [predictions[i]])
+                daily_mse_values_test.append(day_mse)
+
+
+    plt.plot(days, daily_mse_values_test)
+    cwd = os.getcwd()
+    path = Path(cwd) / "Code" / "FigurePlots" / "LSTM"/ "MSE"
+    if not path.exists():
+        path.mkdir()
+    plt.savefig(path / "daily_MSE_LSTM.png")
+    plt.show()
 
     # Compute average of the metrics
     average_mse = sum(mse_values) / len(mse_values)
@@ -198,3 +219,5 @@ if __name__ == "__main__":
     # Save the plot
     plt.savefig(f'{model_name}.png', bbox_inches='tight')
     plt.show()
+
+    plt.plot(mse_values)
