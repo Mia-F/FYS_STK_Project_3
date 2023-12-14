@@ -108,8 +108,8 @@ class LSTMModel:
 
 if __name__ == "__main__":
     # Create the Data Frame for training data
-    data_frame = Data("../Data/BTC-USD_2014.csv")
-    data_frame = Data('../Data/BTC-USD_2014.csv')
+    data_frame = Data("./Data/BTC-USD_2014.csv")
+    data_frame = Data('./Data/BTC-USD_2014.csv')
     data_frame.load_data()
     data_frame.add_technical_indicators()
     ta_data = data_frame.extract_data_for_NN()
@@ -128,9 +128,13 @@ if __name__ == "__main__":
     mape_values = []
     max_error_values = []
 
+    daily_mse_values_test = []
+    days = []
 
     if lstm_model.model is not None:  # Ensure model is available
         for train_index, test_index in tscv.split(lstm_model.X):
+            print(type(train_index))
+            print("FADDDDD", train_index)
             X_train, X_test = lstm_model.X[train_index], lstm_model.X[test_index]
             y_train, y_test = lstm_model.y[train_index], lstm_model.y[test_index]
 
@@ -145,6 +149,20 @@ if __name__ == "__main__":
             max_error_values.append(max_error(y_test, predictions))
             mape_values.append(mean_absolute_percentage_error(y_test, predictions))
 
+            if len(days) == 0:
+                days.extend(train_index)
+                daily_mse_values_test.extend([np.nan for i in range(len(train_index))])
+
+            days.extend(test_index)
+
+            for i in range(len(y_test)):
+                day_mse = mean_squared_error([y_test[i]], [predictions[i]])
+                daily_mse_values_test.append(day_mse)
+
+
+    print(days)
+    plt.plot(days, daily_mse_values_test)
+    plt.show()
 
     # Compute average of the metrics
     average_mse = sum(mse_values) / len(mse_values)
@@ -198,3 +216,5 @@ if __name__ == "__main__":
     # Save the plot
     plt.savefig(f'{model_name}.png', bbox_inches='tight')
     plt.show()
+
+    plt.plot(mse_values)

@@ -142,7 +142,7 @@ def testing_decision_tress(method, n_min, n_max, path, print):
     return lowest_mse_index , mse
 
 #Import Bitcoin data and add technical indicators from NN_BTC_PROJ.py
-data_frame = Data("../Data/BTC-USD_2014.csv")
+data_frame = Data("./Data/BTC-USD_2014.csv")
 data_frame.load_data()
 data_frame.add_technical_indicators()
 ta_data = data_frame.extract_data_for_NN()
