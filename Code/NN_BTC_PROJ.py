@@ -140,8 +140,6 @@ if __name__ == "__main__":
     inaccurate_count_values = []    
 
     if lstm_model.model is not None:  # Ensure model is available
-        open("new.txt", "w")
-        file = open("new.txt", "a")
         for train_index, test_index in tscv.split(lstm_model.X):
             prev_y_test, prev_predictions = None, None
         
@@ -173,7 +171,6 @@ if __name__ == "__main__":
             if len(days) == 0:
                 days.extend(train_index)
                 rolling_r2_values.extend([np.nan for i in range(len(train_index))])
-                file.write(f"{len(days)} - {len(rolling_r2_values)} first \n")
                 daily_mse_values_test.extend([np.nan for i in range(len(train_index))])
                 daily_MAE_values_test.extend([np.nan for i in range(len(train_index))])
             days.extend(test_index)
@@ -189,12 +186,9 @@ if __name__ == "__main__":
                 window_actual = y_test_r2[i - window_size:i]
                 window_predicted = predictions_r2[i - window_size:i]
                 rolling_r2_values.append(r2_score(window_actual, window_predicted))
-            
-            file.write(f"{len(days)} - {len(rolling_r2_values)} \n")
 
             prev_y_test = y_test_r2[-window_size:]
             prev_predictions = predictions_r2[-window_size:]
-        file.close()
 
     plt.plot(days, daily_mse_values_test)
     plt.xlabel("Days since november 15, 2014")
