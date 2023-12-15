@@ -136,6 +136,9 @@ if __name__ == "__main__":
     window_size = 7  
     rolling_r2_values = []
 
+    accuracy_threshold = 0.05  # Example: 5% threshold
+    accuracy_values = []
+
     if lstm_model.model is not None:  # Ensure model is available
         open("new.txt", "w")
         file = open("new.txt", "a")
@@ -155,6 +158,9 @@ if __name__ == "__main__":
             r2_values.append(r2_score(y_test, predictions))
             max_error_values.append(max_error(y_test, predictions))
             mape_values.append(mean_absolute_percentage_error(y_test, predictions))
+            accurate_predictions = np.abs(y_test - predictions.flatten()) / y_test <= accuracy_threshold
+            accuracy = np.mean(accurate_predictions)
+            accuracy_values.append(accuracy)
 
             y_test_r2, predictions_r2 = y_test, predictions
 
@@ -216,12 +222,15 @@ if __name__ == "__main__":
     average_r2 = round(sum(r2_values) / len(r2_values), 5)
     average_mape = sum(mape_values) / len(mape_values)
     average_max_error = sum(max_error_values) / len(max_error_values)
+    average_accuracy = sum(accuracy_values) / len(accuracy_values)  # Average accuracy
+
 
     print(f'Average MSE: {average_mse}')
     print(f'Average MAE: {average_mae}')
     print(f'Average R2: {average_r2}')
     print(f'Average MAPE: {average_mape}')
     print(f'Average MAPE: {average_max_error}')
+    print(f'Average accuarcy:{average_accuracy}')
 
     # Setting days for plot
     days = 365 #* 30
@@ -256,6 +265,7 @@ if __name__ == "__main__":
     f"MAE: {average_mae:.2f}\n"
     f"Max Error: {average_max_error:.2f}\n"
     f"MAPE: {average_mape:.2%}\n"  # Formatting MAPE as a percentage
+    f'Average accuarcy:{average_accuracy:.2%}'
     )
     plt.text(0.02, 0.02, metrics_text, fontsize=10, transform=plt.gcf().transFigure)
     plt.subplots_adjust(left=0.1, bottom=0.2)
