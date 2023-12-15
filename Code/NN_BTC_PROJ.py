@@ -110,7 +110,6 @@ class LSTMModel:
 
 if __name__ == "__main__":
     # Create the Data Frame for training data
-    data_frame = Data("./Data/BTC-USD_2014.csv")
     data_frame = Data('./Data/BTC-USD_2014.csv')
     data_frame.load_data()
     data_frame.add_technical_indicators()
@@ -137,7 +136,8 @@ if __name__ == "__main__":
     rolling_r2_values = []
 
     accuracy_threshold = 0.05  # Example: 5% threshold
-    accuracy_values = []
+    accurate_count_values = []
+    inaccurate_count_values = []    
 
     if lstm_model.model is not None:  # Ensure model is available
         open("new.txt", "w")
@@ -159,8 +159,10 @@ if __name__ == "__main__":
             max_error_values.append(max_error(y_test, predictions))
             mape_values.append(mean_absolute_percentage_error(y_test, predictions))
             accurate_predictions = np.abs(y_test - predictions.flatten()) / y_test <= accuracy_threshold
-            accuracy = np.mean(accurate_predictions)
-            accuracy_values.append(accuracy)
+            accurate_count = np.sum(accurate_predictions)
+            inaccurate_count = len(y_test) - accurate_count
+            accurate_count_values.append(accurate_count)
+            inaccurate_count_values.append(inaccurate_count)
 
             y_test_r2, predictions_r2 = y_test, predictions
 
@@ -222,7 +224,9 @@ if __name__ == "__main__":
     average_r2 = round(sum(r2_values) / len(r2_values), 5)
     average_mape = sum(mape_values) / len(mape_values)
     average_max_error = sum(max_error_values) / len(max_error_values)
-    average_accuracy = sum(accuracy_values) / len(accuracy_values)  # Average accuracy
+    total_accurate_predictions = sum(accurate_count_values)
+    total_inaccurate_predictions = sum(inaccurate_count_values)
+    average_accuracy = total_accurate_predictions / (total_accurate_predictions + total_inaccurate_predictions)
 
 
     print(f'Average MSE: {average_mse}')
