@@ -274,7 +274,47 @@ if __name__ == "__main__":
     plt.text(0.02, 0.02, metrics_text, fontsize=10, transform=plt.gcf().transFigure)
     plt.subplots_adjust(left=0.1, bottom=0.2)
     # Save the plot
-    plt.savefig(f'{model_name}.png', bbox_inches='tight')
+    plt.savefig(f'last_100_lstm.png', bbox_inches='tight')
     plt.show()
 
-    plt.plot(mse_values)
+
+    # Setting days for plot
+    days = 365 #* 30
+    last_100_predictions = final_predictions[-days:]
+    last_100_actuals = final_actuals[-days:]
+
+    print(f"Average days: {days}")
+
+    # Find the points of intersection
+    cross_points_x = []
+    cross_points_y = []
+    for i in range(1, len(last_100_actuals)):
+        if (last_100_actuals[i-1] < last_100_predictions[i-1] and last_100_actuals[i] > last_100_predictions[i]) or \
+        (last_100_actuals[i-1] > last_100_predictions[i-1] and last_100_actuals[i] < last_100_predictions[i]):
+            cross_points_x.append(i)
+            cross_points_y.append(last_100_actuals[i])
+
+    # Plotting
+    plt.figure(figsize=(9, 5))
+    plt.plot(last_100_actuals, label='Actual Prices', color='tab:blue', linestyle='-', linewidth=2)
+    plt.plot(last_100_predictions, label='Predicted Prices', color='tab:red', linestyle='-.', linewidth=2)
+    plt.scatter(cross_points_x, cross_points_y, color='tab:green', marker='x', s=100, label='Cross Points')
+    # Configure plot details
+    plt.title(f'Actual vs Predicted - Last {days} Days - R2: {average_r2}', fontsize=16)
+    plt.xlabel(f'Time (Last {days} Days)', fontsize=14)
+    plt.ylabel('Price', fontsize=14)
+    plt.grid(True, which='both', linestyle='--', linewidth=0.5)
+    plt.legend(fontsize=12)
+    metrics_text = (
+    f"Metrics:\n"
+    f"R2: {average_r2:.2f}\n"
+    f"MAE: {average_mae:.2f}\n"
+    f"Max Error: {average_max_error:.2f}\n"
+    f"MAPE: {average_mape:.2%}\n"  # Formatting MAPE as a percentage
+    f'Average accuarcy:{average_accuracy:.2%}'
+    )
+    plt.text(0.02, 0.02, metrics_text, fontsize=10, transform=plt.gcf().transFigure)
+    plt.subplots_adjust(left=0.1, bottom=0.2)
+    # Save the plot
+    plt.savefig(f'last_365_lstm.png', bbox_inches='tight')
+    plt.show()
