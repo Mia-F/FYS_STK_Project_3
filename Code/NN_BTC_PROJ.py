@@ -12,6 +12,8 @@ import joblib
 import seaborn as sns
 import os
 from pathlib import Path
+import tensorflow as tf
+import random
 
 sns.set_theme()
 
@@ -109,6 +111,10 @@ class LSTMModel:
         print(f"Model saved as {self.model_name}")
 
 if __name__ == "__main__":
+    np.random.seed(42)
+    tf.random.set_seed(42)
+    random.seed(42)
+
     # Create the Data Frame for training data
     data_frame = Data('./Data/BTC-USD_2014.csv')
     data_frame.load_data()
@@ -231,7 +237,7 @@ if __name__ == "__main__":
     print(f'Average accuarcy:{average_accuracy}')
 
     # Setting days for plot
-    days = 365 #* 30
+    days = 100 #* 30
     last_100_predictions = final_predictions[-days:]
     last_100_actuals = final_actuals[-days:]
 
