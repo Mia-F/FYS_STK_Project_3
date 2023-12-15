@@ -189,6 +189,8 @@ if __name__ == "__main__":
         file.close()
 
     plt.plot(days, daily_mse_values_test)
+    plt.xlabel("Days since november 15, 2014")
+    plt.ylabel("MSE")
     cwd = os.getcwd()
     path = Path(cwd) / "Code" / "FigurePlots" / "LSTM"/ "MSE"
     plt.savefig(path / "daily_MSE_LSTM.png")
@@ -196,11 +198,15 @@ if __name__ == "__main__":
 
     path = Path(cwd) / "Code" / "FigurePlots" / "LSTM"/ "MAE"
     plt.plot(days, daily_MAE_values_test)
+    plt.xlabel("Days since november 15, 2014")
+    plt.ylabel("MAE")
     plt.savefig(path / "daily_MAE_LSTM.png")
     plt.show()
 
     path = Path(cwd) / "Code" / "FigurePlots" / "LSTM"/ "R2"
     plt.plot(days, rolling_r2_values)
+    plt.xlabel("Days since november 15, 2014")
+    plt.ylabel("R2 score")
     plt.savefig(path / "daily_R2_LSTM.png")
     plt.show()
 
