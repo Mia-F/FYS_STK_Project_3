@@ -131,10 +131,17 @@ if __name__ == "__main__":
     max_error_values = []
 
     daily_mse_values_test = []
+    daily_MAE_values_test = []
     days = []
+    window_size = 7  
+    rolling_r2_values = []
 
     if lstm_model.model is not None:  # Ensure model is available
+        open("new.txt", "w")
+        file = open("new.txt", "a")
         for train_index, test_index in tscv.split(lstm_model.X):
+            prev_y_test, prev_predictions = None, None
+        
             X_train, X_test = lstm_model.X[train_index], lstm_model.X[test_index]
             y_train, y_test = lstm_model.y[train_index], lstm_model.y[test_index]
 
@@ -149,22 +156,58 @@ if __name__ == "__main__":
             max_error_values.append(max_error(y_test, predictions))
             mape_values.append(mean_absolute_percentage_error(y_test, predictions))
 
+            y_test_r2, predictions_r2 = y_test, predictions
+
+            if prev_y_test:
+                y_test_r2 = prev_y_test + y_test
+                predictions_r2 = prev_predictions + predictions
+
             if len(days) == 0:
                 days.extend(train_index)
+                rolling_r2_values.extend([np.nan for i in range(len(train_index))])
+                file.write(f"{len(days)} - {len(rolling_r2_values)} first \n")
                 daily_mse_values_test.extend([np.nan for i in range(len(train_index))])
+                daily_MAE_values_test.extend([np.nan for i in range(len(train_index))])
             days.extend(test_index)
 
             for i in range(len(y_test)):
                 day_mse = mean_squared_error([y_test[i]], [predictions[i]])
                 daily_mse_values_test.append(day_mse)
 
+                day_MAE = mean_absolute_error([y_test[i]], [predictions[i]])
+                daily_MAE_values_test.append(day_MAE)
+
+            for i in range(window_size, len(y_test_r2) + window_size):
+                window_actual = y_test_r2[i - window_size:i]
+                window_predicted = predictions_r2[i - window_size:i]
+                rolling_r2_values.append(r2_score(window_actual, window_predicted))
+            
+            file.write(f"{len(days)} - {len(rolling_r2_values)} \n")
+
+            prev_y_test = y_test_r2[-window_size:]
+            prev_predictions = predictions_r2[-window_size:]
+        file.close()
 
     plt.plot(days, daily_mse_values_test)
+    plt.xlabel("Days since november 15, 2014")
+    plt.ylabel("MSE")
     cwd = os.getcwd()
     path = Path(cwd) / "Code" / "FigurePlots" / "LSTM"/ "MSE"
-    if not path.exists():
-        path.mkdir()
     plt.savefig(path / "daily_MSE_LSTM.png")
+    plt.show()
+
+    path = Path(cwd) / "Code" / "FigurePlots" / "LSTM"/ "MAE"
+    plt.plot(days, daily_MAE_values_test)
+    plt.xlabel("Days since november 15, 2014")
+    plt.ylabel("MAE")
+    plt.savefig(path / "daily_MAE_LSTM.png")
+    plt.show()
+
+    path = Path(cwd) / "Code" / "FigurePlots" / "LSTM"/ "R2"
+    plt.plot(days, rolling_r2_values)
+    plt.xlabel("Days since november 15, 2014")
+    plt.ylabel("R2 score")
+    plt.savefig(path / "daily_R2_LSTM.png")
     plt.show()
 
     # Compute average of the metrics
