@@ -19,7 +19,6 @@ To run the python programs, the following python packages must be installed
 - `Decision_tree.py`: 
 - `Random_forest.py`:
 - `NN_BTC_PROJ.py`: 
-- `main.py`:
 
 ### Authors
 - Mia Synnøve Frivik
