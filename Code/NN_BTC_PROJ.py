@@ -18,6 +18,34 @@ import random
 sns.set_theme()
 
 class Data:
+    """
+    This class is designed for handling and processing financial market data, particularly for 
+    technical analysis and machine learning applications.
+
+    Attributes:
+    -----------
+    file_path : str
+        The path to the CSV file containing the market data.
+    data : pandas.DataFrame or None
+        A DataFrame to hold the market data after loading from the file. Initially set to None.
+
+    Methods:
+    --------
+    __init__(self, file_path):
+        Initializes the Data class with the provided file path.
+
+    load_data(self):
+        Loads the market data from the CSV file specified in file_path into the 'data' attribute.
+
+    add_technical_indicators(self):
+        Computes and adds various technical indicators (RSI, SMA, MACD, ATR) to the 'data' attribute. 
+        These indicators are commonly used in market analysis.
+
+    extract_data_for_NN(self):
+        Prepares and returns a subset of the market data with relevant columns for Neural Network (NN) processing.
+        This includes both the technical indicators and the basic market data columns such as Open, High, Low, Close, and Volume.
+    """
+
     def __init__(self, file_path):
         self.file_path = file_path
         self.data = None
@@ -53,6 +81,42 @@ class Data:
         return ta_data
 
 class LSTMModel:
+    """
+    This class encapsulates the functionality for creating, training, and utilizing a Long Short-Term Memory (LSTM) neural network model for time series forecasting.
+
+    Attributes:
+    -----------
+    data : pandas.DataFrame
+        The dataset used for training the model.
+    look_back : int
+        The number of previous time steps to use as input variables to predict the next time period.
+    model_name : str
+        The name of the file to which the trained model will be saved.
+    model : keras.Sequential or None
+        The LSTM model. Initially set to None.
+    X : numpy.ndarray or None
+        Feature data for training the model. Initially set to None.
+    y : numpy.ndarray or None
+        Target data for training the model. Initially set to None.
+    scaler : MinMaxScaler
+        Feature scaler for normalizing the dataset.
+
+    Methods:
+    --------
+    __init__(self, data, look_back=5, model_name='model_name.keras'):
+        Initializes the LSTMModel class with data, look_back period, and model name.
+
+    preprocess_data(self):
+        Scales the features and prepares the dataset for LSTM model training.
+
+    build_model(self):
+        Constructs the LSTM neural network architecture, including LSTM layers, Dropout layers, and Dense layers.
+
+    train_model(self):
+        Executes the data preprocessing, builds the model, and trains the LSTM model using the provided dataset.
+        The training process includes early stopping and cross-validation. The trained model is saved to the specified file.
+    """
+
     def __init__(self, data, look_back=5, model_name='model_name.keras'):
         self.data = data
         self.look_back = look_back
@@ -141,7 +205,7 @@ if __name__ == "__main__":
     window_size = 7  
     rolling_r2_values = []
 
-    accuracy_threshold = 0.05  # Example: 5% threshold
+    accuracy_threshold = 0.05  # 5% threshold
     accurate_count_values = []
     inaccurate_count_values = []    
 
