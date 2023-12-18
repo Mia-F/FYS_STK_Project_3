@@ -222,9 +222,9 @@ print(f"The lowest MSE obtained without bootstrap with square error was: {np.min
 print(f"The lowest MSE obtained without bootstrap with Friedman MSE was: {np.min(mse[1][0][:]):.5f}")
 print(f"The lowest MSE obtained without bootstrap with absolute error was: {np.min(mse[2][0][:]):.5f}")
 print("With bootstrap")
-print(f"The lowest MSE obtained without bootstrap with square error was: {np.min(mse[0][1][:]):.5f}")
-print(f"The lowest MSE obtained without bootstrap with Friedman MSE was: {np.min(mse[1][1][:]):.5f}")
-print(f"The lowest MSE obtained without bootstrap with absolute error was: {np.min(mse[2][1][:]):.5f}")
+print(f"The lowest MSE obtained with bootstrap with square error was: {np.min(mse[0][1][:]):.5f}")
+print(f"The lowest MSE obtained with bootstrap with Friedman MSE was: {np.min(mse[1][1][:]):.5f}")
+print(f"The lowest MSE obtained with bootstrap with absolute error was: {np.min(mse[2][1][:]):.5f}")
 print("-------------------------------------------------------------------------------")
 
 #Creating bar plots of the lowest mse achived with each criterions with bootstrap
@@ -232,15 +232,15 @@ fig, ax = plt.subplots(figsize=(9, 5))
 values = np.array([np.min(mse[0][0][:]), np.min(mse[1][0][:]), np.min(mse[2][0][:])])
 ax.bar(methods, values,  align="center")
 ax.set_ylabel("Lowest MSE")
-plt.savefig(path / "bar_plot_bootstrap.png")
+plt.savefig(path / "bar_plot_no_bootstrap.png")
 plt.close()
 
 #Creating bar plots of the lowest mse achived with each criterions without bootstrap
 fig, ax = plt.subplots(figsize=(9, 5))
-values = np.array([np.min(mse[0][0][:]), np.min(mse[1][0][:]), np.min(mse[2][0][:])])
+values = np.array([np.min(mse[0][1][:]), np.min(mse[1][1][:]), np.min(mse[2][1][:])])
 ax.bar(methods, values,  align="center")
 ax.set_ylabel("Lowest MSE")
-plt.savefig(path / "bar_plot_no_bootstrap.png")
+plt.savefig(path / "bar_plot_bootstrap.png")
 plt.close()
 
 #Get the index for where the lowest mse value obtained
