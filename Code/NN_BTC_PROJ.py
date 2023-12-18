@@ -272,7 +272,7 @@ if __name__ == "__main__":
 
             prev_y_test = y_test_r2[-window_size:]
             prev_predictions = predictions_r2[-window_size:]
-
+  
     plt.plot(days, daily_mse_values_test)
     plt.xlabel("Days since november 15, 2014")
     plt.ylabel("MSE")
@@ -353,10 +353,10 @@ if __name__ == "__main__":
     # Save the plot
     plt.savefig(f'last_100_lstm.png', bbox_inches='tight')
     plt.show()
-
+  
 
     # Setting days for plot
-    days = 365 #* 30
+    days = 100 #* 30
     last_100_predictions = final_predictions[-days:]
     last_100_actuals = final_actuals[-days:]
 
@@ -372,6 +372,7 @@ if __name__ == "__main__":
             cross_points_y.append(last_100_actuals[i])
 
     # Plotting
+
     plt.figure(figsize=(9, 5))
     plt.plot(last_100_actuals, label='Actual Prices', color='tab:blue', linestyle='-', linewidth=2)
     plt.plot(last_100_predictions, label='Predicted Prices', color='tab:red', linestyle='-.', linewidth=2)
@@ -394,4 +395,15 @@ if __name__ == "__main__":
     plt.subplots_adjust(left=0.1, bottom=0.2)
     # Save the plot
     plt.savefig(f'last_365_lstm.png', bbox_inches='tight')
+    plt.show()
+  
+
+    #Plot the difference bewteen actual and predicted prices
+    last_100_actuals = np.array(last_100_actuals)
+    last_100_predictions = np.array(last_100_predictions)
+    print(last_100_actuals)
+    print(last_100_predictions)
+    plt.plot(last_100_actuals - last_100_predictions)
+    plt.xlabel(f'Time (Last {days} Days)', fontsize=14)
+    plt.ylabel("Difference between actual and predicted price", fontsize=14)
     plt.show()
