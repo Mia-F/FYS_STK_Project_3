@@ -20,7 +20,16 @@ To run the python programs, the following python packages must be installed
 ### Structure
 - `Decision_tree.py`: This file contains all the necessary code to reproduce the results we obtained for the Decision Tree segment of the project. Due to some inherent randomness, the outcomes may not be identical to those reported, but they should be very similar.
 - `Random_forest.py`:This file contains all the necessary code to reproduce the results we obtained for the Random forest segment of the project. Due to some inherent randomness, the outcomes may not be identical to those reported, but they should be very similar.
-- `NN_BTC_PROJ.py`: This file contains all the necessary code to reproduce the results we obtained for the neural network segment of the project. 
+- `NN_BTC_PROJ.py`: This file contains all the necessary code to reproduce the results we obtained for the neural network segment of the project.
+
+### Run code
+To successfully execute the code, please note that you might need to modify the file path in the script to correctly access the data file located in the 'Data' folder. Ensure that all required packages are installed, and then enter the following command in the terminal to run the codes: 
+
+```bash
+python3 NN_BTC_PROJ.py
+python3 Decision_tree.py
+python3 Random_forest.py
+```
 
 ### Authors
 - Mia Synnøve Frivik
