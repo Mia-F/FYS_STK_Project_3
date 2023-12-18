@@ -1,271 +1,292 @@
 """
-This documnet contains the two classes Decision_tree and predict_future_tree
+This document contains the calculations for Bitcoin predictions with Decision trees
 The code in this document are based on the following codes:
-https://scikit-learn.org/stable/auto_examples/tree/plot_cost_complexity_pruning.html
 https://www.kaggle.com/code/rishidamarla/stock-market-prediction-using-decision-tree
 https://www.kaggle.com/code/prashant111/decision-tree-classifier-tutorial
 """
 
-import matplotlib.pyplot as plt
 import numpy as np
-from sklearn import tree
-from sklearn.metrics import r2_score
-from sklearn.metrics import mean_squared_error
-from sklearn.linear_model import LinearRegression
-from sklearn.tree import DecisionTreeRegressor
-from os import system
-import random
+import seaborn as sns
+import matplotlib.pyplot as plt
+import pandas as pd
 import os
 from pathlib import Path
-import pandas as pd 
+import talib as ta
+from NN_BTC_PROJ import Data
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.metrics import mean_squared_error
+from sklearn.metrics import r2_score
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from sklearn import tree
+from tqdm import tqdm
+import random
 
+#Setting a seed
+random.seed(2023)
 
-class Decision_tree:
-    def __init__(self,  X_train, y_train, X_test, y_test, printing=False, depth=3, randomnes = 0, alpha= False, method="squared_error", splitter = "best") -> None:
-        """
-        Description:
-        ------------
-        A class that uses decision tree to create a model of closing prices of Bitcoins
-        The code in this function is based on the "Decision-Tree Classifier Tutorial" from https://www.kaggle.com/code/prashant111/decision-tree-classifier-tutorial
-        and the part with pruning (alpha) is taken from sckit learns example "Post pruning decision trees with cost complexity pruning" from https://scikit-learn.org/stable/auto_examples/tree/plot_cost_complexity_pruning.html
+#Setting some plotting parameters
+sns.set_theme()
+params = {
+    "font.family": "Serif",
+    "font.serif": "Roman", 
+    "text.usetex": True,
+    "axes.titlesize": "large",
+    "axes.labelsize": "large",
+    "xtick.labelsize": "large",
+    "ytick.labelsize": "large",
+    "legend.fontsize": "large"
+}
 
-        Parameters:
-        ------------
-            I    X_train (pd.data_frame): A pandas dataframe containing the different parameters the model is trained on.
-            II   Y_train (pd.data_frame): A pandas dataframe containing the targets the model is trained on. (for these runs it is set to the closing time)
-            III  X_test (pd.data_frame): Same as X_train only with the test data
-            IV   Y_test (pd.data_frame): Same as y_train only with the test data
-            V    printing (Boolean): If True the class will print results while running, default False
-            VI   depth (int): The max depth of the decision tree
-            VII  randomnes (int): The random state used in DecisionTreeRegressor
-            VIII alpha (Boolean): If True the prediction function will plot dependencies on alpha (pruning) and not return y_pred, y_pred_test and clf, default Flase
-            IX   method (str): a string of either squared_error, friedman_mse, absolute error or poisson that is used as criterion for DecisionTreeRegressor  
-        functions:
-            I    predict:  If alpha is False, the function returns y_pred and y_pred_test which is the predictions for this model.
-                           If alpha is True, the dependencis for alpha is plotted.
-            II   R2_score: A function that calculates the R2 score for the test and train data and returns these.
-            III  mse:      A function that calculates the MSE values for test and train and returns these. 
-        ------------       
-        """
-        self.depth = depth
-        self.X_train = X_train
-        self.y_train = y_train
-        self.X_test = X_test
-        self.y_test = y_test
-        self.printing = printing
-        self.randomnes = randomnes
-        self.alpha = alpha
-        self.method = method
-        self.splitter = splitter
-    
-    def predict(self):
-        """
-        Description:
-        ------------
-            A function using skit-learns decisonTreeRegressor to fit the model to the training dataset 
-        Returns:
-        ------------
-            I  y_pred (np.ndarray): An array containing the model of the Bitcoin closing prices of the test data  
-            II y_pred_train (np.ndarray): An array containing the model of the Bitcoin closing prices of the train data     
-            III clf: 
-        ------------
-        """
-    
-        clf = DecisionTreeRegressor(criterion=self.method, max_depth=self.depth, random_state=self.randomnes, splitter = self.splitter)
-        if self.alpha == True:
-            """
-            The code for pruning is taken from https://scikit-learn.org/stable/auto_examples/tree/plot_cost_complexity_pruning.html
-            """
+plt.rcParams.update(params)
+pd.options.mode.chained_assignment = None  # default='warn'
 
-            #Define path for saving plots
-            cwd = os.getcwd()
-            
-            path = Path(cwd) / "FigurePlots" / "Decision_tree"/ self.method 
-            if not path.exists():
-                path.mkdir()
+#Setting path for figures
+cwd = os.getcwd()
+path = Path(cwd) / "FigurePlots" / "Decision_tree"
 
-            path_pruning = clf.cost_complexity_pruning_path(self.X_train, self.y_train)
-            ccp_alphas, impurities = path_pruning.ccp_alphas, path_pruning.impurities
-            clfs = []
+if not path.exists():
+    path.mkdir()
 
-            fig, ax = plt.subplots(figsize=(12,6))
-            ax.plot(ccp_alphas[:-1], impurities[:-1], marker="o", drawstyle="steps-post")
-            ax.set_xlabel("effective alpha")
-            ax.set_ylabel("total impurity of leaves")
-            plt.savefig(path / "Impurity.png")
-            plt.close()
+def predict_future(data_frame=None, depth=3, predicted_days = 10, method="squared_error", splitter="best"):
+    """
+    Description:
+    ------------
+    A class that uses decision tree to predict the closing price of Bitcoins.
+    This function is based on the following code: https://www.kaggle.com/code/rishidamarla/stock-market-prediction-using-decision-tree
+    Parameters:
+    ------------
+        I   data_frame (pd.data_frame): A pandas data frame containing the parameters used to make a model
+        II  depth (int): The max depth of the decision tree
+        III predicted_days (int): The amount of days the price is predicted 
+        IV  method (str): a string of either squared_error, friedman_mse, absolute error or poisson that is used as criterion for DecisionTreeRegressor  
+        V   splitter (str): string of either "best" or "random" which is the strategy used to choose the split at each node 
+    Returns:
+        I   valid (pd.data_frame): A pandas data frame containing the data for the predicted_days including the predicted prices 
+        II  days (np.ndarray): An array containing at least the 100 last day in the dataset.    
+    ------------       
+    """
+    df = pd.DataFrame()
+    df = data_frame 
+    #drop the label colum in datset
+    df = df.drop(["Label"], axis=1)
+    #Include a prediction colum that is the price of Bitcoin when market close for all days expet the prediction days
+    df["Prediction"] = df["Close"].shift(-predicted_days)
+    #removes the prediction for the prediction days from data set
+    X = df.drop(["Prediction"], axis=1)[:-predicted_days]
+    y = df["Prediction"][:-predicted_days]
 
-            mse = np.zeros(len(ccp_alphas))
-            mse_train = np.zeros(len(ccp_alphas))
+    #uses the datset to creat a model 
+    clf = DecisionTreeRegressor(criterion=method, random_state=42, max_depth=depth, splitter=splitter)
+    #Fit model with data tath does not include the predicted days
+    clf.fit(X, y)
 
-            for i in range(len(ccp_alphas)):
-                clf = DecisionTreeRegressor(criterion=self.method, random_state=self.randomnes, ccp_alpha=ccp_alphas[i], splitter=self.splitter)
-                clf.fit(self.X_train, self.y_train)
-                clfs.append(clf)
-                y_pred = clf.predict(self.X_test)
-                y_pred_train = clf.predict(self.X_train)
-
-                mse[i] = mean_squared_error(self.y_test, y_pred)
-                mse_train[i] = mean_squared_error(self.y_train, y_pred_train)
-
-            clfs = clfs[:-1]
-            ccp_alphas = ccp_alphas[:-1]
-
-            node_counts = [clf.tree_.node_count for clf in clfs]
-            depth = [clf.tree_.max_depth for clf in clfs]
-            fig, ax = plt.subplots(2, 1, figsize=(12,6))
-            ax[0].plot(ccp_alphas, node_counts, marker="o", drawstyle="steps-post")
-            ax[0].set_xlabel("alpha")
-            ax[0].set_ylabel("number of nodes")
-            ax[1].plot(ccp_alphas, depth, marker="o", drawstyle="steps-post")
-            ax[1].set_xlabel("alpha")
-            ax[1].set_ylabel("depth of tree")
-            plt.savefig(path / "Alpha_depth.png")
-            plt.close()
-
-            fig, ax = plt.subplots(figsize=(12,6))
-            ax.plot(ccp_alphas, mse[:-1], label="Test")
-            ax.plot(ccp_alphas, mse_train[:-1], label="Train")
-            ax.set_xlabel("alpha")
-            ax.set_ylabel("MSE")
-            ax.legend()
-            plt.savefig(path / "Alpha_mse.png")
-            plt.close()
-                    
-        else:   
-            #Fit model with training data
-            parm = clf.fit(self.X_train, self.y_train)
-
-            #Predict a model with test data
-            y_pred = clf.predict(self.X_test)
-            #Predict a model with training data
-            y_pred_train = clf.predict(self.X_train)
-            return y_pred, y_pred_train, parm
+    #creat data_frem with predicted days
+    x_future = df.drop(["Prediction"], axis = 1)[-predicted_days:]
+    x_future = x_future.tail(predicted_days)
         
-    def R2_score(self, y_pred, y_pred_train):
-        """
-        Description:
-        ------------
-            A function that calculates the R2 score 
-        Parameters:
-        ------------ 
-            I   y_pred (np.ndarray): An array containing the model of the Bitcoin closing prices of the test data  
-            II  y_pred_train (np.ndarray): An array containing the model of the Bitcoin closing prices of the train data
-        Returns:
-        ------------
-            I   r2_score_test (float): The R2 score of the model based on test data
-            II  r2_score_train (float): The R2 score of the model based on training data     
-        ------------
-        """
-        r2_score_test = r2_score(self.y_test, y_pred)
-        r2_score_train = r2_score(self.y_train, y_pred_train)
-        if self.printing==True:
-            print(f"Model R2 score: {r2_score_test:.4f}")
-            print(f"Training-set R2 score: {r2_score_train:.4f}")
-        return r2_score_test, r2_score_train
-    
-    def mse(self, y_pred, y_pred_train):
-        """
-        Description:
-        ------------
-            A function that calculates the MSE 
-        Parameters:
-        ------------ 
-            I   y_pred (np.ndarray): An array containing the model of the Bitcoin closing prices of the test data  
-            II  y_pred_train (np.ndarray): An array containing the model of the Bitcoin closing prices of the train data
-        Returns:
-        ------------
-            I   r2_score_test (float): The MSE of the model based on test data
-            II  r2_score_train (float): The MSE of the model based on training data     
-        ------------
-        """
-        mse_test = mean_squared_error(self.y_test, y_pred)
-        mse_train = mean_squared_error(self.y_train, y_pred_train)
-        if self.printing==True:
-            print(f"Model MSE value: {mse_test:.4f}")
-            print(f"Training-set MSE value: {mse_train:.4f}")
-        return mse_test, mse_train
-    
-
-
-class predict_future_tree:
-    def __init__(self , data_frame=None, depth=3, predicted_days = 10, randomnes = 0, method="squared_error", splitter = "best") -> None:
-        """
-        Description:
-        ------------
-        A class that uses decision tree to predict the closing price of Bitcoins
-        Parameters:
-        ------------
-            I   data_frame (pd.data_frame): A pandas data frame containing the parameters used to make a model
-            II  depth (int): The max depth of the decision tree
-            III predicted_days (int): The amount of days the price is predicted 
-            IV  randomnes (int): The random state used in DecisionTreeRegressor
-            V   method (str): a string of either squared_error, friedman_mse, absolute error or poisson that is used as criterion for DecisionTreeRegressor  
-            VI  splitter (str): string of either "best" or "random" which is the strategy used to choose the split at each node 
-        functions:
-            I    predict:  A function that uses decision tree to predict the closing price of Bitcoins
-        ------------       
-        """
-        self.depth = depth
-        self.predicted_days = predicted_days
-        self.data_frame = data_frame
-        self.randomnes = randomnes
-        self.method = method
-        self.splitter = splitter
-
-    def predict(self):
-        """
-        Description:
-        ------------
-            A function that Predict Bitcoin prices and plots the result to the actual price. 
-            This function is based on the following code: https://www.kaggle.com/code/rishidamarla/stock-market-prediction-using-decision-tree
-        """
-
-        df = pd.DataFrame()
-        df = self.data_frame 
-        #drop the label colum in datset
-        df = df.drop(["Label"], axis=1)
-        #Include a prediction colum that is the price of Bitcoin when market close for all days expet the prediction days
-        df["Prediction"] = df["Close"].shift(-self.predicted_days)
-        #removes the prediction for the prediction days from data set
-        X = df.drop(["Prediction"], axis=1)[:-self.predicted_days]
-        y = df["Prediction"][:-self.predicted_days]
-
-        #uses the datset to creat a model 
-        clf = DecisionTreeRegressor(criterion=self.method, random_state=self.randomnes, splitter=self.splitter)
-        #Fit model with data tath does not include the predicted days
-        clf.fit(X, y)
-
-        #creat data_frem with predicted days
-        x_future = df.drop(["Prediction"], axis = 1)[-self.predicted_days:]
-        x_future = x_future.tail(self.predicted_days)
+    # Predict prices of future days
+    tree_prediction = clf.predict(x_future)
+    predictions = tree_prediction 
         
-        # Predict prices of future days
-        tree_prediction = clf.predict(x_future)
-        predictions = tree_prediction 
-        
-        #Adds the result for predicted day in a separate data_frame
-        valid = x_future
-        valid["Prediction"] = predictions
+    #Adds the result for predicted day in a separate data_frame
+    valid = x_future
+    valid["Prediction"] = predictions
 
-        cwd = os.getcwd()
-        path = Path(cwd) / "FigurePlots" / "Decision_tree"
-        if not path.exists():
-            path.mkdir()
+    #Plott result against actuall predicted prices
+    lenght = len(X.loc[:,"Close"])
+    days = np.linspace(lenght + 1 + 108, lenght + predicted_days + 1 + 108, predicted_days)
 
-        #Plott result against actuall predicted prices
-        lenght = len(X.loc[:,"Close"])
-        days = np.linspace(lenght + 1 + 108, lenght + self.predicted_days + 1 + 108, self.predicted_days)
+    fig, ax = plt.subplots(figsize=(9, 5))
+    ax.set_xlabel("Days")
+    ax.set_ylabel("US Dollers")
+    ax.plot(data_frame.loc[:,"Close"], "--", label="Actual closing price")
+    ax.scatter(days, valid.loc[:,"Prediction"], label="Predicted closing price", color="tab:orange")
+    ax.legend()
+    plt.savefig(path / f"predicted_prices_for_{predicted_days}_days.png")
+    plt.close()
 
-        plt.figure(figsize=(12,8))
-        plt.xlabel("Days")
-        plt.ylabel("US Dollers")
-        plt.plot(self.data_frame.loc[:,"Close"], "--", label="Actual closing price")
-        plt.scatter(days, valid.loc[:,"Prediction"], label="Predicted closing price", color="tab:orange")
-        plt.legend()
-        plt.savefig(path / "predicition.png")
-        plt.show()
+    #if predicted days is less than 100, the prediction still gets plotted with 100 days.
+    if predicted_days <= 100:
+        fig, ax = plt.subplots(figsize=(9, 5))
+        ax.set_xlabel("Days")
+        ax.set_ylabel("US Dollers")
+        ax.plot(data_frame.loc[3187:,"Close"], "--", label="Actual closing price")
+        ax.scatter(days, valid.loc[:,"Prediction"], label="Predicted closing price", color="tab:orange")
+        ax.legend()
+        plt.savefig(path / f"predicted_prices_for_{predicted_days}_days_zoomed.png")
         plt.close()
+    
+    else:
+        fig, ax = plt.subplots(figsize=(9, 5))
+        ax.set_xlabel("Days")
+        ax.set_ylabel("US Dollers")
+        ax.plot(data_frame.loc[days[0]:,"Close"], "--", label="Actual closing price")
+        ax.scatter(days, valid.loc[:,"Prediction"], label="Predicted closing price", color="tab:orange")
+        ax.legend()
+        plt.savefig(path / f"predicted_prices_for_{predicted_days}_days_zoomed.png")
+        plt.close()
+        
+    return valid, days
+
+#Import Bitcoin data and add technical indicators from NN_BTC_PROJ.py
+data_frame = Data("/Users/miafrivik/Documents/GitHub/FYS_STK_Project_3/Data/BTC-USD_2014.csv")
+data_frame.load_data()
+data_frame.add_technical_indicators()
+ta_data = data_frame.extract_data_for_NN()
+
+#Creat define matrix and validation array
+X = ta_data.drop(["Close", "Target"], axis=1)
+y = ta_data.loc[:, "Close"]
+
+#Define an array with depth, must be integers
+depth = np.linspace(1, 100, 100).astype(int)
+
+#split in to train test 
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.8)
+
+#Scaling the data
+scaler = StandardScaler()
+scaler.fit(X_train)
+    
+X_train_scaled = scaler.transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+y_train_scaled = (y_train - np.mean(y_train))/np.std(y_train)
+y_test_scaled = (y_test - np.mean(y_train))/np.std(y_train)
+
+#Creating an array with the criterions for DecisionTreeRegressor
+methods = np.array(["squared_error", "friedman_mse","absolute_error"])
+splitter = np.array(["best", "random"])
+
+#Define arrays for mse and R2 score
+mse = np.zeros((len(methods), len(splitter), len(depth)))
+R2_score = np.zeros((len(methods), len(splitter), len(depth)))
+
+#Decide if the best decision tree is plotted or not
+print_graph = False
+
+#Define a value to calculate the lowest mse later in the for loops
+min_mse = 10000
+
+j = 0
+k = 0
+for method in methods:
+    print(f"Method = {method}")
+    k = 0
+    for split in splitter:
+        print(f"Splitter = {split}")
+        for i in tqdm(range(len(depth))):
+                #Uses the datset to creat a model 
+                clf = DecisionTreeRegressor(criterion=method, random_state=42, max_depth=depth[i], splitter=split)
+                #Fit model with data 
+                clf.fit(X_train_scaled, y_train_scaled)
+                # Predict prices
+                y_pred = clf.predict(X_test_scaled)
+
+                #Store mse and R2 score values 
+                mse[j][k][i] = mean_squared_error(y_test_scaled, y_pred)
+                R2_score[j][k][i] = r2_score(y_test_scaled, y_pred)
+                if mse[j][k][i] < min_mse:
+                    min_mse = mse[j][k][i]
+                    if print_graph == True:
+                        #creat a visulasation of the best tree
+                        plt.figure(figsize=(12,8))
+                        tree.plot_tree(clf) 
+                        plt.savefig(path / "best_tree.png")
+                        plt.close()
+        k += 1
+    j += 1
 
 
+#Plotting the mse  as a function of depth
+fig, ax = plt.subplots(figsize=(9, 5))
+ax.plot(depth, mse[0][0][:], label="Square error splitted with best")
+ax.plot(depth, mse[0][1][:], label="Square error splitted with random", linestyle='dashed')
+ax.plot(depth, mse[1][0][:], label="Friedman MSE splitted with best")
+ax.plot(depth, mse[1][1][:], label="Friedman MSE splitted with random", linestyle='dashed')
+ax.plot(depth, mse[2][0][:], label="Absolute error splitted with best")
+ax.plot(depth, mse[2][1][:], label="Absolute error splitted with random", linestyle='dashed')
+ax.legend()
+ax.set_xlabel("Depth")
+ax.set_ylabel("MSE")
+plt.savefig(path / "mse_different_methods.png")
+plt.close()
+
+#Plotting th R2 score as a function of depth
+fig, ax = plt.subplots(figsize=(9, 5))
+ax.plot(depth, R2_score[0][0][:], label="Square error splitted with best")
+ax.plot(depth, R2_score[0][1][:], label="Square error splitted with random")
+ax.plot(depth, R2_score[1][0][:], label="Friedman MSE splitted with best")
+ax.plot(depth, R2_score[1][1][:], label="Friedman splitted with random")
+ax.plot(depth, R2_score[2][0][:], label="Absolute error splitted with best")
+ax.plot(depth, R2_score[2][1][:], label="Absolute splitted with random")
+ax.set_xlabel("Depth")
+ax.set_ylabel("R2 score")
+ax.legend()
+plt.savefig(path / "r2_score_different.png")
+plt.close()
+
+
+print("\n")
+print("----------------------------------- Results -----------------------------------")
+print("With best")
+print(f"The lowest MSE obtained with square error splitted with best was: {np.min(mse[0][0][:]):.5f}")
+print(f"The lowest MSE obtained with Friedman MSE splitted with best was: {np.min(mse[1][0][:]):.5f}")
+print(f"The lowest MSE obtained with absolute error splitted with best was: {np.min(mse[2][0][:]):.5f}")
+print("With random")
+print(f"The lowest MSE obtained with square error splitted with random was: {np.min(mse[0][1][:]):.5f}")
+print(f"The lowest MSE obtained with Friedman MSE splitted with random was: {np.min(mse[1][1][:]):.5f}")
+print(f"The lowest MSE obtained with absolute error splitted with random was: {np.min(mse[2][1][:]):.5f}")
+print("-------------------------------------------------------------------------------")
+
+#Creating bar plots of the lowest mse achived with each criterions for splitting with best
+fig, ax = plt.subplots(figsize=(9, 5))
+values = np.array([np.min(mse[0][0][:]), np.min(mse[1][0][:]), np.min(mse[2][0][:])])
+ax.bar(methods, values,  align="center")
+ax.set_ylabel("Lowest MSE")
+plt.savefig(path / "bar_plot_best.png")
+plt.close()
+
+#Creating bar plots of the lowest mse achived with each criterions for splitting with random
+fig, ax = plt.subplots(figsize=(9, 5))
+values = np.array([np.min(mse[0][1][:]), np.min(mse[1][1][:]), np.min(mse[2][1][:])])
+ax.bar(methods, values,  align="center")
+ax.set_ylabel("Lowest MSE")
+plt.savefig(path / "bar_plot_random.png")
+plt.close()
+
+
+#Get the index for where the lowest mse value obtained
+i,j,k = np.where(mse == mse.min())
+
+#Find which parameters gave the lowest mse
+best_method = methods[i[0]]
+best_split = splitter[j][0]
+best_depth = depth[k][0]
+
+#Creating an array of days we want to predict Bitcoin prices
+predicted_days = np.array([1, 10, 100, 365])
+
+
+for i in range(len(predicted_days)):
+    #Predict Bitcoin closing prices
+    valid, days = predict_future(data_frame=ta_data, depth=best_depth, predicted_days = predicted_days[i], method=best_method, splitter=best_split)
+    if predicted_days[i] == 1:
+        #Plott the Difference between actual closing price and predicted one
+        fig, ax = plt.subplots(figsize=(12,6))
+        ax.scatter(days, ta_data.loc[days[0]:,"Close"] - valid.loc[:,"Prediction"])
+        ax.set_xlabel("Days since 15 november 2014")
+        ax.set_ylabel("Difference between actual and predicted price")
+        plt.savefig(path / f"Difference_in_predicted_prices_for_{predicted_days[i]}_days.png")
+        plt.close()
+    
+    else:
+            
+        fig, ax = plt.subplots(figsize=(12,6))
+        ax.plot(days, ta_data.loc[days[0]:,"Close"] - valid.loc[:,"Prediction"])
+        ax.set_xlabel("Days since 15 november 2014")
+        ax.set_ylabel("Difference between actual and predicted price")
+        plt.savefig(path / f"Difference_in_predicted_prices_for_{predicted_days[i]}_days.png")
+        plt.close()
 
