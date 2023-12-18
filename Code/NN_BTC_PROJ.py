@@ -175,6 +175,19 @@ class LSTMModel:
         print(f"Model saved as {self.model_name}")
 
 if __name__ == "__main__":
+
+    """
+    This script demonstrates the process of forecasting financial time series data using LSTM (Long Short-Term Memory) neural networks, specifically focusing on Bitcoin (BTC) price prediction.
+    ------
+    Usage:
+    ------
+    This block is meant to be executed as a standalone script and is tailored for users with knowledge in financial analysis and machine learning. It requires a specific CSV file format and utilizes libraries like TensorFlow, NumPy, and scikit-learn.
+
+    Output:
+    -------
+    The script outputs the trained LSTM model and its performance metrics, offering insights into its effectiveness for Bitcoin price forecasting.
+    """
+
     np.random.seed(42)
     tf.random.set_seed(42)
     random.seed(42)
